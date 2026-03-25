@@ -6,7 +6,7 @@ import type {
   ValidationResult,
 } from "../types/validation.types";
 
-export class UserValidator {
+export class AuthValidator {
   static validateLogin(data: unknown): ValidationResult<LoginFormData> {
     const result = loginSchema.safeParse(data);
 

@@ -1,11 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
 import style from "./Login.module.scss";
-import { Link } from "react-router-dom";
-import type { LoginFormData } from "../../../Service/Validation/types/validation.types";
+import { Link, useNavigate } from "react-router-dom";
+import { AuthValidator, type LoginFormData } from "../../../Service/Validation";
 
 const Login = () => {
-  const birdRef = useRef(null);
-  const containerRef = useRef(null);
+  const birdRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [formData, setFormData] = useState<LoginFormData>({
     login: "",
     password: "",
@@ -13,6 +15,7 @@ const Login = () => {
   const [errors, setErrors] = useState<
     Partial<Record<keyof LoginFormData, string>>
   >({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     const bird = birdRef.current;
@@ -31,6 +34,41 @@ const Login = () => {
       }
     }, 500);
   }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    const error = AuthValidator.validateLoginField(
+      name as keyof LoginFormData,
+      value,
+    );
+    setErrors((prev) => ({ ...prev, [name]: error || undefined }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const result = AuthValidator.validateLogin(formData);
+
+    if (result.success) {
+      console.log("Валидные данные:", result.data);
+      try {
+        navigate("/");
+      } catch (error) {
+        console.error("Ошибка входа:", error);
+      }
+    } else {
+      const errorMap: Partial<Record<keyof LoginFormData, string>> = {};
+      result.errors?.forEach((err) => {
+        errorMap[err.field as keyof LoginFormData] = err.message;
+      });
+      setErrors(errorMap);
+    }
+
+    setIsSubmitting(false);
+  };
 
   return (
     <main className={style.main}>
@@ -97,28 +135,47 @@ const Login = () => {
           </g>
         </svg>
       </div>
-      <div className={style.container} ref={containerRef}>
+
+      <form
+        className={style.container}
+        ref={containerRef}
+        onSubmit={handleSubmit}
+      >
         <h1>Вход в систему</h1>
+
         <div className={style.inputdiv}>
           <label>Логин</label>
           <input
             type="text"
+            name="login"
             value={formData.login}
+            onChange={handleChange}
             placeholder="Введите ваш логин"
+            className={errors.login ? style.error : ""}
           />
         </div>
+
         <div className={style.inputdiv}>
           <label>Пароль</label>
           <input
             type="password"
+            name="password"
             value={formData.password}
+            onChange={handleChange}
             placeholder="Введите пароль"
+            className={errors.password ? style.error : ""}
           />
         </div>
+
         <div className={style.buttondiv}>
-          <button className={style.qr}>QR</button>
-          <button className={style.vhod}>Войти</button>
+          <button type="button" className={style.qr}>
+            QR
+          </button>
+          <button type="submit" className={style.vhod} disabled={isSubmitting}>
+            {isSubmitting ? "Вход..." : "Войти"}
+          </button>
         </div>
+
         <div className={style.txt}>
           <p>
             Нет аккаунта?
@@ -128,7 +185,7 @@ const Login = () => {
           </p>
           <p>Политика конфиденциальности</p>
         </div>
-      </div>
+      </form>
     </main>
   );
 };
