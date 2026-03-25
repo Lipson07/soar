@@ -1,18 +1,10 @@
-import React, { useRef, useEffect, useState } from "react";
-import style from "./Login.module.scss";
+import React, { useRef, useEffect } from "react";
+import style from "./Register.module.scss";
 import { Link } from "react-router-dom";
-import type { LoginFormData } from "../../../Service/Validation/types/validation.types";
 
-const Login = () => {
+const Register = () => {
   const birdRef = useRef(null);
   const containerRef = useRef(null);
-  const [formData, setFormData] = useState<LoginFormData>({
-    login: "",
-    password: "",
-  });
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof LoginFormData, string>>
-  >({});
 
   useEffect(() => {
     const bird = birdRef.current;
@@ -20,8 +12,6 @@ const Login = () => {
 
     setTimeout(() => {
       if (bird && cont) {
-        cont.style.transform = "translateY(0)";
-
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             bird.style.transform = "translateY(-30vh)";
@@ -98,32 +88,31 @@ const Login = () => {
         </svg>
       </div>
       <div className={style.container} ref={containerRef}>
-        <h1>Вход в систему</h1>
+        <h1>Регистрация</h1>
         <div className={style.inputdiv}>
-          <label>Логин</label>
-          <input
-            type="text"
-            value={formData.login}
-            placeholder="Введите ваш логин"
-          />
+          <label>Имя пользователя</label>
+          <input type="text" placeholder="Введите имя" />
+        </div>
+        <div className={style.inputdiv}>
+          <label>Email</label>
+          <input type="email" placeholder="Введите email" />
         </div>
         <div className={style.inputdiv}>
           <label>Пароль</label>
-          <input
-            type="password"
-            value={formData.password}
-            placeholder="Введите пароль"
-          />
+          <input type="password" placeholder="Введите пароль" />
+        </div>
+        <div className={style.inputdiv}>
+          <label>Подтвердите пароль</label>
+          <input type="password" placeholder="Повторите пароль" />
         </div>
         <div className={style.buttondiv}>
-          <button className={style.qr}>QR</button>
-          <button className={style.vhod}>Войти</button>
+          <button className={style.register}>Зарегистрироваться</button>
         </div>
         <div className={style.txt}>
           <p>
-            Нет аккаунта?
-            <Link to="/register">
-              <span>Зарегистрироваться</span>
+            Уже есть аккаунт?{" "}
+            <Link to="/login">
+              <span>Войти</span>
             </Link>
           </p>
           <p>Политика конфиденциальности</p>
@@ -133,4 +122,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
