@@ -1,0 +1,101 @@
+import React, { useEffect, useRef } from "react";
+import style from "./MeetPage.module.scss";
+import { oblako1, oblako2 } from "../../assets/MeetPage";
+import { Link } from "react-router-dom";
+
+const MeetPage = () => {
+  const oblakRef1 = useRef(null);
+  const oblakRef2 = useRef(null);
+  const logoDiv = useRef(null);
+  const txtdiv = useRef(null);
+  const buttonRef = useRef(null);
+
+  useEffect(() => {
+    const animation = () => {
+      const obl1 = oblakRef1.current;
+      const obl2 = oblakRef2.current;
+      const text = txtdiv.current;
+      const logo = logoDiv.current;
+      const button = buttonRef.current;
+
+      if (obl1) {
+        setTimeout(() => {
+          if (obl1 && obl2) {
+            obl1.style.transform = "translateY(-200px)";
+            obl2.style.transform = "translateY(200px)";
+          }
+          if (logo) {
+            logo.style.transform = "translateY(-150px)";
+          }
+          if (text) {
+            text.style.display = "flex";
+            setTimeout(() => {
+              text.style.opacity = "1";
+            }, 50);
+          }
+          if (button) {
+            button.style.display = "block";
+            setTimeout(() => {
+              button.style.opacity = "1";
+            }, 50);
+          }
+        }, 3000);
+      }
+    };
+
+    animation();
+  }, []);
+
+  return (
+    <main className={style.main}>
+      <img src={oblako1} ref={oblakRef1} className={style.oblak1} alt="cloud" />
+      <div className={style.container}>
+        <div className={style.logodiv} ref={logoDiv}>
+          <svg
+            version="1.0"
+            xmlns="http://www.w3.org/2000/svg"
+            width="48.000000pt"
+            height="48.000000pt"
+            viewBox="0 0 48.000000 48.000000"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <g
+              transform="translate(0.000000,48.000000) scale(0.100000,-0.100000)"
+              fill="#ffffff"
+              stroke="none"
+            >
+              <path
+                d="M31 446 c-16 -19 0 -90 22 -94 14 -3 16 2 10 30 l-6 33 50 -46 c96
+-90 143 -100 185 -39 15 22 39 42 53 46 54 14 74 -49 23 -73 -23 -12 -25 -18
+-21 -51 7 -52 -10 -89 -52 -114 -43 -25 -34 -48 11 -27 40 20 66 61 72 115 5
+52 19 69 65 81 l27 8 -43 48 c-49 53 -78 59 -119 28 l-25 -20 -44 45 c-58 59
+-70 59 -84 -3 -5 -26 -3 -33 8 -33 8 0 17 10 21 23 5 21 7 21 42 -15 39 -38
+41 -68 5 -68 -20 0 -97 57 -145 109 -33 35 -39 37 -55 17z"
+              />
+              <path
+                d="M20 316 c0 -7 8 -24 18 -37 11 -13 22 -37 26 -53 4 -18 17 -32 34
+-38 l27 -10 -37 -40 c-63 -65 -46 -128 33 -128 31 0 47 7 70 29 31 32 40 81
+14 81 -8 0 -15 -9 -15 -20 0 -33 -37 -62 -73 -58 -52 5 -47 36 13 92 55 52 59
+76 12 76 -33 0 -52 16 -52 45 0 11 -9 26 -20 33 -11 7 -20 19 -20 27 0 8 -7
+15 -15 15 -8 0 -15 -6 -15 -14z"
+              />
+            </g>
+          </svg>
+          <h1>Soar</h1>
+        </div>
+        <div className={style.txt} ref={txtdiv}>
+          <p>Твоё пространство в безопасности.</p>
+          <p>Пусть разговоры взлетают</p>
+        </div>
+        <Link to="/login">
+          <button className={style.button} ref={buttonRef}>
+            Начать общения
+          </button>
+        </Link>
+      </div>
+      <img src={oblako2} ref={oblakRef2} className={style.oblak2} alt="cloud" />
+    </main>
+  );
+};
+
+export default MeetPage;
