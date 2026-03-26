@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import style from "./MeetPage.module.scss";
-import { oblako1, oblako2 } from "../../assets/MeetPage";
+import { oblako1, oblako2 } from "../../../assets/MeetPage";
 import { Link } from "react-router-dom";
 
 const MeetPage = () => {

@@ -1,0 +1,296 @@
+basePath: /api
+definitions:
+  domain.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      name:
+        minLength: 2
+        type: string
+      password:
+        minLength: 6
+        type: string
+      role:
+        enum:
+        - user
+        - admin
+        - moderator
+        type: string
+    required:
+    - email
+    - name
+    - password
+    - role
+    type: object
+  domain.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  domain.UpdateUserRequest:
+    properties:
+      avatar:
+        type: boolean
+      avatar_path:
+        type: string
+      email:
+        type: string
+      name:
+        minLength: 2
+        type: string
+      role:
+        enum:
+        - user
+        - admin
+        - moderator
+        type: string
+    type: object
+  domain.User:
+    properties:
+      avatar:
+        type: boolean
+      avatar_path:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified_at:
+        type: string
+      id:
+        type: integer
+      is_online:
+        type: boolean
+      last_seen_at:
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      role:
+        type: string
+      updated_at:
+        type: string
+    required:
+    - email
+    - name
+    - role
+    type: object
+host: backend-1-8qiq.onrender.com
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API для управления пользователями и проектами
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: MyApp API
+  version: 1.0.0
+paths:
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Аутентификация пользователя по email и паролю
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Вход в систему
+      tags:
+      - users
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Регистрация
+      tags:
+      - users
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех пользователей
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить всех пользователей
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пользователя по ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить пользователя
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Возвращает пользователя по его ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить пользователя
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные существующего пользователя
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить пользователя
+      tags:
+      - users
+schemes:
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
