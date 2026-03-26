@@ -5,7 +5,7 @@
 
 .searchWrapper {
   position: relative;
-  width: 90%;
+  width: 100%;
 }
 
 .searchIcon {
@@ -20,7 +20,7 @@
 }
 
 .searchInput {
-  width: 100%;
+  width: 80%;
   padding: clamp(8px, 1.5vw, 12px) clamp(10px, 2vw, 16px)
     clamp(8px, 1.5vw, 12px) clamp(36px, 6vw, 48px);
   background: #2b2b2b;

@@ -55,7 +55,7 @@ const Login = () => {
     if (result.success) {
       console.log("Валидные данные:", result.data);
       try {
-        navigate("/");
+        navigate("/main");
       } catch (error) {
         console.error("Ошибка входа:", error);
       }
