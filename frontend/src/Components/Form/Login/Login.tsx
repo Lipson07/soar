@@ -1,21 +1,18 @@
 import React, { useRef, useEffect, useState } from "react";
 import style from "./Login.module.scss";
 import { Link, useNavigate } from "react-router-dom";
-import { AuthValidator, type LoginFormData } from "../../../Service/Validation";
+import { Input } from "../../UI";
 
 const Login = () => {
   const birdRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
-  const [formData, setFormData] = useState<LoginFormData>({
-    login: "",
+  const [formData, setFormData] = useState({
+    email: "",
     password: "",
   });
-  const [errors, setErrors] = useState<
-    Partial<Record<keyof LoginFormData, string>>
-  >({});
-  const navigate = useNavigate();
 
   useEffect(() => {
     const bird = birdRef.current;
@@ -38,36 +35,36 @@ const Login = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    const error = AuthValidator.validateLoginField(
-      name as keyof LoginFormData,
-      value,
-    );
-    setErrors((prev) => ({ ...prev, [name]: error || undefined }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const result = AuthValidator.validateLogin(formData);
-
-    if (result.success) {
-      console.log("Валидные данные:", result.data);
-      try {
-        navigate("/main");
-      } catch (error) {
-        console.error("Ошибка входа:", error);
-      }
-    } else {
-      const errorMap: Partial<Record<keyof LoginFormData, string>> = {};
-      result.errors?.forEach((err) => {
-        errorMap[err.field as keyof LoginFormData] = err.message;
+    try {
+      const response = await fetch("http://localhost:8080/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       });
-      setErrors(errorMap);
-    }
+      const data = await response.json();
 
-    setIsSubmitting(false);
+      if (!response.ok) {
+        throw new Error(data.message || "Ошибка регистрации");
+      }
+
+      console.log("Регистрация успешна:", data);
+      navigate("/main");
+    } catch (error) {
+      console.error("Ошибка входа:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -142,30 +139,29 @@ const Login = () => {
         onSubmit={handleSubmit}
       >
         <h1>Вход в систему</h1>
+        <Input
+          background="#333333"
+          color="white"
+          width="320px"
+          label="Еmail"
+          placeholder="Введите email"
+          type="text"
+          name="email"
+          onChange={handleChange}
+          value={formData.email}
+        />
 
-        <div className={style.inputdiv}>
-          <label>Логин</label>
-          <input
-            type="text"
-            name="login"
-            value={formData.login}
-            onChange={handleChange}
-            placeholder="Введите ваш логин"
-            className={errors.login ? style.error : ""}
-          />
-        </div>
-
-        <div className={style.inputdiv}>
-          <label>Пароль</label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Введите пароль"
-            className={errors.password ? style.error : ""}
-          />
-        </div>
+        <Input
+          background="#333333"
+          color="white"
+          width="320px"
+          label="Пароль"
+          placeholder="Введите пароль"
+          type="password"
+          name="password"
+          onChange={handleChange}
+          value={formData.password}
+        />
 
         <div className={style.buttondiv}>
           <button type="button" className={style.qr}>

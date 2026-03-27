@@ -1,10 +1,20 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import style from "./Register.module.scss";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Input } from "../../UI";
 
 const Register = () => {
-  const birdRef = useRef(null);
-  const containerRef = useRef(null);
+  const birdRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    login: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
 
   useEffect(() => {
     const bird = birdRef.current;
@@ -12,6 +22,8 @@ const Register = () => {
 
     setTimeout(() => {
       if (bird && cont) {
+        cont.style.transform = "translateY(0)";
+
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             bird.style.transform = "translateY(-30vh)";
@@ -21,6 +33,44 @@ const Register = () => {
       }
     }, 500);
   }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("http://localhost:8080/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.login,
+          email: formData.email,
+          password: formData.password,
+          role: "user",
+        }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Ошибка регистрации");
+      }
+
+      console.log("Регистрация успешна:", data);
+
+      navigate("/login");
+    } catch (error) {
+      console.error("Ошибка регистрации:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <main className={style.main}>
@@ -87,27 +137,70 @@ const Register = () => {
           </g>
         </svg>
       </div>
-      <div className={style.container} ref={containerRef}>
+
+      <form
+        className={style.container}
+        ref={containerRef}
+        onSubmit={handleSubmit}
+      >
         <h1>Регистрация</h1>
-        <div className={style.inputdiv}>
-          <label>Имя пользователя</label>
-          <input type="text" placeholder="Введите имя" />
-        </div>
-        <div className={style.inputdiv}>
-          <label>Email</label>
-          <input type="email" placeholder="Введите email" />
-        </div>
-        <div className={style.inputdiv}>
-          <label>Пароль</label>
-          <input type="password" placeholder="Введите пароль" />
-        </div>
-        <div className={style.inputdiv}>
-          <label>Подтвердите пароль</label>
-          <input type="password" placeholder="Повторите пароль" />
-        </div>
+
+        <Input
+          background="#333333"
+          color="white"
+          width="320px"
+          label="Имя пользователя"
+          placeholder="Введите имя"
+          type="text"
+          name="login"
+          onChange={handleChange}
+          value={formData.login}
+        />
+
+        <Input
+          background="#333333"
+          color="white"
+          width="320px"
+          label="Email"
+          placeholder="Введите email"
+          type="email"
+          name="email"
+          onChange={handleChange}
+          value={formData.email}
+        />
+        <Input
+          background="#333333"
+          color="white"
+          width="320px"
+          label="Пароль"
+          placeholder="Введите пароль"
+          type="password"
+          name="password"
+          onChange={handleChange}
+          value={formData.password}
+        />
+
+        <Input
+          background="#333333"
+          color="white"
+          width="320px"
+          label="Подтвердите пароль"
+          placeholder="Введите пароль повторно"
+          type="password"
+          name="confirmPassword"
+          onChange={handleChange}
+          value={formData.confirmPassword}
+        />
         <div className={style.buttondiv}>
-          <button className={style.register}>Зарегистрироваться</button>
+          <button
+            type="submit"
+            className={style.register}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Регистрация..." : "Зарегистрироваться"}
+          </button>
         </div>
+
         <div className={style.txt}>
           <p>
             Уже есть аккаунт?{" "}
@@ -117,7 +210,7 @@ const Register = () => {
           </p>
           <p>Политика конфиденциальности</p>
         </div>
-      </div>
+      </form>
     </main>
   );
 };

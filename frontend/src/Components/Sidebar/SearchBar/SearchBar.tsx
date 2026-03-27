@@ -5,6 +5,7 @@ function SearchBar() {
   return (
     <div className={style.searchContainer}>
       <div className={style.searchWrapper}>
+        <input type="text" placeholder="Поиск" className={style.searchInput} />
         <svg
           className={style.searchIcon}
           width="20"
@@ -20,7 +21,6 @@ function SearchBar() {
             strokeLinecap="round"
           />
         </svg>
-        <input type="text" placeholder="Поиск" className={style.searchInput} />
       </div>
     </div>
   );

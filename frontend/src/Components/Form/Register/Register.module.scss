@@ -53,45 +53,6 @@
       animation: fadeInUp 0.5s ease-out;
     }
 
-    .inputdiv {
-      width: 320px;
-      display: flex;
-      gap: 8px;
-      flex-direction: column;
-      animation: slideIn 0.5s ease-out;
-
-      label {
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.7);
-      }
-
-      input {
-        width: 100%;
-        height: 20px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        outline: none;
-        padding: 10px;
-        background-color: #333333;
-        color: white;
-        font-size: 14px;
-        transition: all 0.3s ease;
-
-        &:focus {
-          border-color: #4a90e2;
-          transform: translateY(-2px);
-          box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
-        }
-
-        &:hover {
-          border-color: rgba(74, 144, 226, 0.5);
-        }
-
-        &::placeholder {
-          color: rgba(255, 255, 255, 0.4);
-        }
-      }
-    }
     .buttondiv {
       display: flex;
       justify-content: center;
