@@ -1,13 +1,50 @@
 .sidebar {
   width: 30%;
   height: 100%;
-  background: #202020;
+  background: rgba(41, 41, 41, 0.95);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: row;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-right-color: rgba(255, 255, 255, 0.15);
+  }
+
   .container {
     height: 100%;
     width: 100%;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
   }
 }
