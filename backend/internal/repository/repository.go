@@ -14,3 +14,11 @@ type UserRepository interface {
 	UpdatePassword(ctx context.Context, userID int64, hashedPassword string) error
 	Delete(ctx context.Context, id int64) error
 }
+type ChatRepository interface {
+	Create(ctx context.Context, user *domain.Chat) error
+	GetByID(ctx context.Context, id int64) (*domain.Chat, error)
+	GetByName(ctx context.Context, email string) (*domain.Chat, error)
+	GetAll(ctx context.Context) ([]domain.Chat, error)
+	Update(ctx context.Context, user *domain.Chat) error
+	Delete(ctx context.Context, id int64) error
+}

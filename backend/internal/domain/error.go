@@ -13,4 +13,8 @@ var (
 	ErrInvalidCredentials   = errors.New("неверный email или пароль")
 	ErrUnauthorized         = errors.New("не авторизован")
 	ErrInternalServer       = errors.New("внутренняя ошибка сервера")
+	ErrChatNotFound    			= errors.New("чат не найден")
+	ErrChatNameExists  			= errors.New("чат с таким названием уже существует")
+	ErrInvalidChatType 			= errors.New("некорректный тип чата")
+	ErrInvalidChatID   			= errors.New("некорректный ID чата")
 )

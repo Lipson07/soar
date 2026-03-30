@@ -1,5 +1,53 @@
 basePath: /api
 definitions:
+  domain.Chat:
+    properties:
+      avatar_path:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: integer
+      description:
+        maxLength: 500
+        type: string
+      id:
+        type: integer
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      type:
+        enum:
+        - private
+        - group
+        - channel
+        type: string
+      updated_at:
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  domain.CreateChatRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
+      type:
+        enum:
+        - private
+        - group
+        - channel
+        type: string
+    required:
+    - name
+    - type
+    type: object
   domain.CreateUserRequest:
     properties:
       email:
@@ -31,6 +79,18 @@ definitions:
     required:
     - email
     - password
+    type: object
+  domain.UpdateChatRequest:
+    properties:
+      avatar_path:
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      name:
+        maxLength: 255
+        minLength: 2
+        type: string
     type: object
   domain.UpdateUserRequest:
     properties:
@@ -95,6 +155,208 @@ info:
   title: MyApp API
   version: 1.0.0
 paths:
+  /chats:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех чатов
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Chat'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить все чаты
+      tags:
+      - chats
+    post:
+      consumes:
+      - application/json
+      description: Создает новый чат (private, group или channel)
+      parameters:
+      - description: Данные чата
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateChatRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Создание чата
+      tags:
+      - chats
+  /chats/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет чат по ID
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Удалить чат
+      tags:
+      - chats
+    get:
+      consumes:
+      - application/json
+      description: Возвращает чат по его ID
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить чат
+      tags:
+      - chats
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные существующего чата
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateChatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Обновить чат
+      tags:
+      - chats
+  /chats/by-name:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает чат по его названию
+      parameters:
+      - description: Название чата
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Получить чат по имени
+      tags:
+      - chats
   /login:
     post:
       consumes:

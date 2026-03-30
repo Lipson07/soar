@@ -43,4 +43,14 @@ func (h *UserHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	}
 }
 
-
+func (h *ChatHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	chats := protected.Group("/chats")
+	{
+		chats.POST("/", h.Create)
+		chats.GET("/", h.GetAll)
+		chats.GET("/:id", h.GetByID)
+		chats.GET("/by-name", h.GetByName)
+		chats.PUT("/:id", h.Update)
+		chats.DELETE("/:id", h.Delete)
+	}
+}
