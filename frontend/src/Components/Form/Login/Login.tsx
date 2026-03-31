@@ -1,13 +1,24 @@
 import React, { useRef, useEffect, useState } from "react";
-import style from "./Login.module.scss";
+import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  setUser,
+  setLoading,
+  setError,
+  selectUserLoading,
+  selectUserError,
+} from "../../../store/userSlice";
+import style from "./Login.module.scss";
 import { Input } from "../../UI";
 
 const Login = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const loading = useSelector(selectUserLoading);
+  const error = useSelector(selectUserError);
+
   const birdRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     email: "",
@@ -39,7 +50,8 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+
+    dispatch(setLoading(true));
 
     try {
       const response = await fetch("http://localhost:8080/api/login", {
@@ -52,18 +64,34 @@ const Login = () => {
           password: formData.password,
         }),
       });
+
       const data = await response.json();
+      console.log("Ответ от сервера:", data);
 
       if (!response.ok) {
-        throw new Error(data.message || "Ошибка регистрации");
+        dispatch(setError(data.message || "Ошибка входа"));
+        return;
       }
+      const userData = data.user || data;
 
-      console.log("Регистрация успешна:", data);
+      dispatch(
+        setUser({
+          id: userData.id,
+          email: userData.email,
+          name: userData.name || userData.email,
+          role: userData.role || "user",
+          avatar_path: userData.avatar_path || false,
+          last_seen_at: userData.last_seen_at || null,
+          created_at: userData.created_at,
+          updated_at: userData.updated_at,
+        }),
+      );
+
+      console.log("Вход успешен:", data);
       navigate("/main");
     } catch (error) {
       console.error("Ошибка входа:", error);
-    } finally {
-      setIsSubmitting(false);
+      dispatch(setError("Ошибка соединения с сервером"));
     }
   };
 
@@ -139,11 +167,12 @@ const Login = () => {
         onSubmit={handleSubmit}
       >
         <h1>Вход в систему</h1>
+
         <Input
           background="#333333"
           color="white"
           width="320px"
-          label="Еmail"
+          label="Email"
           placeholder="Введите email"
           type="text"
           name="email"
@@ -167,8 +196,8 @@ const Login = () => {
           <button type="button" className={style.qr}>
             QR
           </button>
-          <button type="submit" className={style.vhod} disabled={isSubmitting}>
-            {isSubmitting ? "Вход..." : "Войти"}
+          <button type="submit" className={style.vhod}>
+            {loading ? "Вход..." : "Войти"}
           </button>
         </div>
 

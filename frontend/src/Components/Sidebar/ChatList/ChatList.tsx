@@ -1,15 +1,22 @@
 import React from "react";
+import { useDispatch } from "react-redux";
+import { openCreateChat } from "../../../store/modalChatSlice";
 import style from "./ChatList.module.scss";
 import SearchBar from "../SearchBar/SearchBar";
 import StoriesSection from "../StoriesSection/StoriesSection";
 
 function ChatList() {
+  const dispatch = useDispatch();
+
   return (
     <div className={style.chatList}>
       <div className={style.header}>
         <div className={style.titleWrapper}>
           <h1>Чаты</h1>
-          <button className={style.addButton}>
+          <button
+            className={style.addButton}
+            onClick={() => dispatch(openCreateChat())}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path
                 d="M12 5V19M5 12H19"
@@ -23,7 +30,6 @@ function ChatList() {
       </div>
 
       <StoriesSection />
-
       <SearchBar />
 
       <div className={style.chatsContainer}>
@@ -39,7 +45,12 @@ function ChatList() {
             />
           </svg>
           <p>У вас пока нет чатов</p>
-          <button className={style.createChatBtn}>Создать чат</button>
+          <button
+            className={style.createChatBtn}
+            onClick={() => dispatch(openCreateChat())}
+          >
+            Создать чат
+          </button>
         </div>
       </div>
     </div>
