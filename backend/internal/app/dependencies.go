@@ -14,15 +14,18 @@ import (
 func initDependencies(db *sqlx.DB) *gin.Engine {
 
 	userRepo := postgres.NewUserRepository(db)
-	chatRepo:=postgres.NewChatRepostory(db)
-
+	chatRepo := postgres.NewChatRepository(db)
+	chatMemberRepo := postgres.NewChatMemberRepository(db)
 	userService := service.NewUserService(userRepo)
-	chatService:=service.NewChatService(chatRepo)
+	chatService := service.NewChatService(chatRepo)
+	chatMemberService := service.NewChatMemberService(chatMemberRepo, chatRepo, userRepo)
 	userHandler := rest.NewUserHandler(userService)
-	chatHandler:=rest.NewChatHandler(chatService)
+	chatHandler := rest.NewChatHandler(chatService)
+	chatMemberHandler := rest.NewChatMemberHandler(chatMemberService)
 	router := rest.SetupRouter(
 		userHandler,
 		chatHandler,
+		chatMemberHandler,
 	)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

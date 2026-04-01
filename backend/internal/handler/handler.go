@@ -6,10 +6,10 @@ type UserHandler interface {
 	Register(c *gin.Context)
 	Login(c *gin.Context)
 	GetUser(c *gin.Context)
+	SearchUsers(c *gin.Context)
 	GetAllUsers(c *gin.Context)
 	UpdateUser(c *gin.Context)
 	DeleteUser(c *gin.Context)
-	RegisterRoutes(public, protected *gin.RouterGroup)
 }
 
 type ChatHandler interface {
@@ -19,5 +19,18 @@ type ChatHandler interface {
 	GetAll(c *gin.Context)
 	Update(c *gin.Context)
 	Delete(c *gin.Context)
-	RegisterRoutes(public, protected *gin.RouterGroup)
-} 	
+}
+
+type ChatMemberHandler interface {
+	AddMember(c *gin.Context)
+	AddMembers(c *gin.Context)
+	GetChatMembers(c *gin.Context)
+	GetMember(c *gin.Context)
+	UpdateMemberRole(c *gin.Context)
+	UpdateLastRead(c *gin.Context)
+	RemoveMember(c *gin.Context)
+	LeaveChat(c *gin.Context)
+	KickMember(c *gin.Context)
+	GetUserChats(c *gin.Context)
+	GetMemberCount(c *gin.Context)
+}

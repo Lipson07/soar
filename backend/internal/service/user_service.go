@@ -82,6 +82,33 @@ func (s *userService) GetAll(ctx context.Context) ([]domain.User, error) {
 	return users, nil
 }
 
+func (s *userService) SearchUsers(ctx context.Context, query string, limit, offset int) ([]domain.User, error) {
+	if query == "" {
+		return []domain.User{}, nil
+	}
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	users, err := s.userRepo.Search(ctx, query, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка поиска пользователей: %w", err)
+	}
+
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	return users, nil
+}
+
 func (s *userService) Update(ctx context.Context, id int64, req *domain.UpdateUserRequest) (*domain.User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {

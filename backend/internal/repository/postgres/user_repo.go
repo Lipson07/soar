@@ -74,6 +74,25 @@ func (r *UserRepository) GetAll(ctx context.Context) ([]domain.User, error) {
 	return users, nil
 }
 
+func (r *UserRepository) Search(ctx context.Context, query string, limit, offset int) ([]domain.User, error) {
+	var users []domain.User
+	sqlQuery := `
+		SELECT id, name, email, role, avatar, last_seen_at, is_online, created_at, updated_at
+		FROM users
+		WHERE email ILIKE $1 OR name ILIKE $1
+		ORDER BY name
+		LIMIT $2 OFFSET $3
+	`
+
+	searchPattern := "%" + query + "%"
+	err := r.db.SelectContext(ctx, &users, sqlQuery, searchPattern, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка поиска пользователей: %w", err)
+	}
+
+	return users, nil
+}
+
 func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 	query := `
         UPDATE users SET

@@ -6,6 +6,7 @@ import {
   selectModalChat,
 } from "../../../store/modalChatSlice";
 import style from "./CreateChat.module.scss";
+import { Input } from "../../UI";
 
 function CreateChat() {
   const dispatch = useDispatch();
@@ -49,6 +50,85 @@ function CreateChat() {
         </button>
 
         <h2>Создать чат</h2>
+
+        <form>
+          <Input
+            background="#333333"
+            color="white"
+            width="500px"
+            label="Название чата"
+            placeholder="Введите название"
+            type="text"
+            name="name"
+          />
+
+          <div className={style.formGroup}>
+            <label className={style.label}>Описание (необязательно)</label>
+            <textarea
+              className={style.textarea}
+              name="description"
+              placeholder="Введите описание (максимум 500 символов)"
+              rows={3}
+              maxLength={500}
+            />
+          </div>
+
+          <div className={style.typeGroup}>
+            <label className={style.typeLabel}>Тип чата</label>
+            <div className={style.typeOptions}>
+              <label className={style.typeOption}>
+                <input
+                  type="radio"
+                  name="type"
+                  value="private"
+                  defaultChecked
+                />
+                <span className={style.typeRadio}></span>
+                <div className={style.typeContent}>
+                  <span className={style.typeTitle}>Приватный</span>
+                  <span className={style.typeDesc}>
+                    Только для приглашенных
+                  </span>
+                </div>
+              </label>
+
+              <label className={style.typeOption}>
+                <input type="radio" name="type" value="group" />
+                <span className={style.typeRadio}></span>
+                <div className={style.typeContent}>
+                  <span className={style.typeTitle}>Группа</span>
+                  <span className={style.typeDesc}>
+                    Общайтесь с несколькими людьми
+                  </span>
+                </div>
+              </label>
+
+              <label className={style.typeOption}>
+                <input type="radio" name="type" value="channel" />
+                <span className={style.typeRadio}></span>
+                <div className={style.typeContent}>
+                  <span className={style.typeTitle}>Канал</span>
+                  <span className={style.typeDesc}>
+                    Для трансляций и широкой аудитории
+                  </span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div className={style.actions}>
+            <button
+              type="button"
+              className={style.cancelButton}
+              onClick={handleClose}
+            >
+              Отмена
+            </button>
+            <button type="submit" className={style.submitButton}>
+              Создать чат
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

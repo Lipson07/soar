@@ -38,6 +38,7 @@ func (h *UserHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	{
 		users.GET("/", h.GetAllUsers)
 		users.GET("/:id", h.GetUser)
+		users.GET("/search", h.SearchUsers)
 		users.PUT("/:id", h.UpdateUser)
 		users.DELETE("/:id", h.DeleteUser)
 	}
@@ -48,9 +49,26 @@ func (h *ChatHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	{
 		chats.POST("/", h.Create)
 		chats.GET("/", h.GetAll)
-		chats.GET("/:id", h.GetByID)
+		chats.GET("/:chat_id", h.GetByID)
 		chats.GET("/by-name", h.GetByName)
-		chats.PUT("/:id", h.Update)
-		chats.DELETE("/:id", h.Delete)
+		chats.PUT("/:chat_id", h.Update)
+		chats.DELETE("/:chat_id", h.Delete)
 	}
+}
+func (h *ChatMemberHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	members := protected.Group("/chats/:chat_id/members")
+	{
+		members.POST("", h.AddMember)
+		members.POST("/bulk", h.AddMembers)
+		members.GET("", h.GetChatMembers)
+		members.GET("/count", h.GetMemberCount)
+		members.GET("/:user_id", h.GetMember)
+		members.PUT("/:user_id/role", h.UpdateMemberRole)
+		members.DELETE("/:user_id", h.RemoveMember)
+		members.POST("/:user_id/kick", h.KickMember)
+	}
+
+	protected.POST("/chats/:chat_id/read", h.UpdateLastRead)
+	protected.POST("/chats/:chat_id/leave", h.LeaveChat)
+	protected.GET("/users/chats", h.GetUserChats)
 }

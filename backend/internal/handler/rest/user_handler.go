@@ -77,6 +77,44 @@ func (h *UserHandler) Login(c *gin.Context) {
 	})
 }
 
+// SearchUsers ищет пользователей по имени или email
+// @Summary      Поиск пользователей
+// @Description  Ищет пользователей по имени или email (частичное совпадение)
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Param        query query string true "Поисковый запрос"
+// @Param        limit query int false "Лимит (default 20)"
+// @Param        offset query int false "Смещение (default 0)"
+// @Success      200  {array}  domain.User
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Router       /users/search [get]
+func (h *UserHandler) SearchUsers(c *gin.Context) {
+	query := c.Query("query")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "поисковый запрос обязателен"})
+		return
+	}
+
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if err != nil {
+		limit = 20
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil {
+		offset = 0
+	}
+
+	users, err := h.userService.SearchUsers(c, query, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
 // GetUser возвращает пользователя по ID
 // @Summary      Получить пользователя
 // @Description  Возвращает пользователя по его ID
