@@ -1,11 +1,39 @@
-import React from "react";
+import React, { useState } from "react";
 import style from "./SearchBar.module.scss";
 
 function SearchBar() {
+  const [query, setQuery] = useState<string>("");
+
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setQuery(value);
+
+    if (value.trim() === "") {
+      console.log("Пустой запрос, поиск не выполняется");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/users/search?query=${encodeURIComponent(value)}`,
+      );
+      const data = await response.json();
+      console.log("Результаты поиска:", data);
+    } catch (error) {
+      console.error("Ошибка при поиске:", error);
+    }
+  };
+
   return (
     <div className={style.searchContainer}>
       <div className={style.searchWrapper}>
-        <input type="text" placeholder="Поиск" className={style.searchInput} />
+        <input
+          type="text"
+          placeholder="Поиск людей по имени"
+          className={style.searchInput}
+          value={query}
+          onChange={handleChange}
+        />
         <svg
           className={style.searchIcon}
           width="20"

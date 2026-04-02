@@ -1,8 +1,9 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
-import storage from "./storage"; // ✅ Используем кастомный storage
+import storage from "./storage";
 import user from "./userSlice";
 import modal from "./modalChatSlice";
+import search from "./searchSlice";
 
 const persistUserConfig = {
   key: "user",
@@ -16,6 +17,7 @@ export const store = configureStore({
   reducer: {
     user: persistedUserReducer,
     modal: modal,
+    search: search,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
