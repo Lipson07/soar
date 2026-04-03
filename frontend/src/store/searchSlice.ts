@@ -9,15 +9,18 @@ interface User {
   last_seen_at: string | null;
   created_at: string;
   updated_at: string;
+  is_online?: boolean;
 }
 
 interface SearchState {
+  query: string;
   results: User[];
   loading: boolean;
   error: string | null;
 }
 
 const initialState: SearchState = {
+  query: "",
   results: [],
   loading: false,
   error: null,
@@ -45,8 +48,12 @@ const searchSlice = createSlice({
   name: "search",
   initialState,
   reducers: {
+    setSearchQuery: (state, action) => {
+      state.query = action.payload;
+    },
     clearResults: (state) => {
       state.results = [];
+      state.query = "";
       state.error = null;
     },
   },
@@ -67,5 +74,15 @@ const searchSlice = createSlice({
   },
 });
 
-export const { clearResults } = searchSlice.actions;
+export const { setSearchQuery, clearResults } = searchSlice.actions;
+
+export const selectSearchQuery = (state: { search: SearchState }) =>
+  state.search.query;
+export const selectSearchResults = (state: { search: SearchState }) =>
+  state.search.results || [];
+export const selectSearchLoading = (state: { search: SearchState }) =>
+  state.search.loading;
+export const selectSearchError = (state: { search: SearchState }) =>
+  state.search.error;
+
 export default searchSlice.reducer;

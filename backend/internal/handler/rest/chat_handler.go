@@ -39,7 +39,12 @@ func (h *ChatHandler) Create(c *gin.Context) {
 		return
 	}
 
-	chat, err := h.chatService.Create(c, &req)
+	userID := c.GetInt64("user_id")
+	if userID == 0 {
+		userID = 1
+	}
+
+	chat, err := h.chatService.Create(c, &req, userID)
 	if err != nil {
 		if err == domain.ErrChatNameExists {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})

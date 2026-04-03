@@ -15,7 +15,7 @@ type UserService interface {
 	SearchUsers(ctx context.Context, query string, limit, offset int) ([]domain.User, error)
 }
 type ChatService interface {
-	Create(ctx context.Context, req *domain.CreateChatRequest) (*domain.Chat, error)
+	Create(ctx context.Context, req *domain.CreateChatRequest, userID int64) (*domain.Chat, error)
 	GetByID(ctx context.Context, id int64) (*domain.Chat, error)
 	GetByName(ctx context.Context, name string) (*domain.Chat, error)
 	GetAll(ctx context.Context) ([]domain.Chat, error)
@@ -24,11 +24,11 @@ type ChatService interface {
 }
 
 type ChatMemberService interface {
-	AddMember(ctx context.Context, chatID int64, req *domain.AddMemberRequest, currentUserID int64) (*domain.ChatMember, error)
 	AddMembers(ctx context.Context, chatID int64, userIDs []int64, currentUserID int64) error
+	AddMember(ctx context.Context, chatID int64, req *domain.AddMemberRequest, currentUserID int64) (*domain.ChatMember, error)
 	GetMember(ctx context.Context, chatID, userID int64) (*domain.ChatMember, error)
 	GetChatMembers(ctx context.Context, chatID int64) ([]domain.ChatMember, error)
-	GetUserChats(ctx context.Context, userID int64) ([]domain.ChatMember, error)
+	GetUserChats(ctx context.Context, userID int64) ([]domain.Chat, error)
 	GetMemberCount(ctx context.Context, chatID int64) (int, error)
 	UpdateMemberRole(ctx context.Context, chatID, userID int64, req *domain.UpdateMemberRoleRequest, currentUserID int64) error
 	UpdateLastRead(ctx context.Context, chatID, userID int64) error

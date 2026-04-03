@@ -9,34 +9,58 @@ import (
 )
 
 type chatService struct {
-	chatRepo repository.ChatRepository
+	chatRepo       repository.ChatRepository
+	chatMemberRepo repository.ChatMemberRepository
 }
 
-func NewChatService(chatRepo repository.ChatRepository) ChatService {
+func NewChatService(
+	chatRepo repository.ChatRepository,
+	chatMemberRepo repository.ChatMemberRepository,
+) ChatService {
 	return &chatService{
-		chatRepo: chatRepo,
+		chatRepo:       chatRepo,
+		chatMemberRepo: chatMemberRepo,
 	}
 }
 
-func (s *chatService) Create(ctx context.Context, req *domain.CreateChatRequest) (*domain.Chat, error) {
-	if req.Name == "" {
-		return nil, fmt.Errorf("название чата не может быть пустым")
+func (s *chatService) Create(ctx context.Context, req *domain.CreateChatRequest, userID int64) (*domain.Chat, error) {
+	if req.Type != "private" && (req.Name == nil || *req.Name == "") {
+		return nil, fmt.Errorf("название чата не может быть пустым для групповых чатов")
 	}
 
-	existing, _ := s.chatRepo.GetByName(ctx, req.Name)
-	if existing != nil {
-		return nil, domain.ErrChatNameExists
+	if req.Name != nil && *req.Name != "" {
+		existing, _ := s.chatRepo.GetByName(ctx, *req.Name)
+		if existing != nil {
+			return nil, domain.ErrChatNameExists
+		}
+	}
+
+	var name string
+	if req.Name != nil && *req.Name != "" {
+		name = *req.Name
+	} else if req.Type == "private" {
+		name = ""
 	}
 
 	chat := &domain.Chat{
 		Type:        req.Type,
-		Name:        req.Name,
+		Name:        &name,
 		Description: req.Description,
 		AvatarPath:  nil,
-		CreatedBy:   nil,
+		CreatedBy:   &userID,
 	}
 
 	if err := s.chatRepo.Create(ctx, chat); err != nil {
+		return nil, err
+	}
+
+	member := &domain.ChatMember{
+		ChatID: chat.ID,
+		UserID: userID,
+		Role:   "owner",
+	}
+
+	if err := s.chatMemberRepo.Create(ctx, member); err != nil {
 		return nil, err
 	}
 
@@ -89,16 +113,25 @@ func (s *chatService) Update(ctx context.Context, id int64, req *domain.UpdateCh
 	}
 
 	if req.Name != nil {
-		if *req.Name == "" {
+		if chat.Type != "private" && *req.Name == "" {
 			return nil, fmt.Errorf("название чата не может быть пустым")
 		}
-		if *req.Name != chat.Name {
+
+		currentName := ""
+		if chat.Name != nil {
+			currentName = *chat.Name
+		}
+
+		if *req.Name != currentName && *req.Name != "" {
 			existing, _ := s.chatRepo.GetByName(ctx, *req.Name)
 			if existing != nil {
 				return nil, domain.ErrChatNameExists
 			}
 		}
-		chat.Name = *req.Name
+
+		if chat.Type != "private" || *req.Name != "" {
+			chat.Name = req.Name
+		}
 	}
 
 	if req.Description != nil {

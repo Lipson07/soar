@@ -18,7 +18,7 @@ func NewChatRepository(db *sqlx.DB) *ChatRepository {
 
 func (r *ChatRepository) Create(ctx context.Context, chat *domain.Chat) error {
 	query := `
-        INSERT INTO users (type,name,description,avatar_path,created_by,created_at, updated_at) 
+        INSERT INTO chats (type, name, description, avatar_path, created_by, created_at, updated_at) 
         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
         RETURNING id, created_at, updated_at
     `
@@ -31,12 +31,12 @@ func (r *ChatRepository) Create(ctx context.Context, chat *domain.Chat) error {
 		return fmt.Errorf("ошибка создания: %w", err)
 	}
 	return nil
-
 }
+
 func (r *ChatRepository) GetByID(ctx context.Context, id int64) (*domain.Chat, error) {
 	query := `
         SELECT id, type, name, description, avatar_path, created_by, created_at, updated_at 
-        FROM users 
+        FROM chats 
         WHERE id = $1
     `
 
@@ -52,7 +52,7 @@ func (r *ChatRepository) GetByID(ctx context.Context, id int64) (*domain.Chat, e
 func (r *ChatRepository) GetByName(ctx context.Context, name string) (*domain.Chat, error) {
 	query := `
         SELECT id, type, name, description, avatar_path, created_by, created_at, updated_at 
-        FROM users 
+        FROM chats 
         WHERE name = $1
     `
 
@@ -68,7 +68,7 @@ func (r *ChatRepository) GetByName(ctx context.Context, name string) (*domain.Ch
 func (r *ChatRepository) GetAll(ctx context.Context) ([]domain.Chat, error) {
 	query := `
         SELECT id, type, name, description, avatar_path, created_by, created_at, updated_at 
-        FROM users 
+        FROM chats 
         ORDER BY id
     `
 
@@ -83,7 +83,7 @@ func (r *ChatRepository) GetAll(ctx context.Context) ([]domain.Chat, error) {
 
 func (r *ChatRepository) Update(ctx context.Context, chat *domain.Chat) error {
 	query := `
-        UPDATE users 
+        UPDATE chats 
         SET type = $1, name = $2, description = $3, avatar_path = $4, created_by = $5, updated_at = NOW()
         WHERE id = $6
         RETURNING updated_at
@@ -102,7 +102,7 @@ func (r *ChatRepository) Update(ctx context.Context, chat *domain.Chat) error {
 }
 
 func (r *ChatRepository) Delete(ctx context.Context, id int64) error {
-	query := `DELETE FROM users WHERE id = $1`
+	query := `DELETE FROM chats WHERE id = $1`
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {

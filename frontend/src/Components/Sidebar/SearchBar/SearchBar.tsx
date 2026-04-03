@@ -1,27 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { searchUsers, setSearchQuery } from "../../../store/searchSlice";
+import type { AppDispatch } from "../../../store/store";
 import style from "./SearchBar.module.scss";
 
-function SearchBar() {
+interface SearchBarProps {
+  onFocus?: () => void;
+  onBlur?: () => void;
+}
+
+function SearchBar({ onFocus, onBlur }: SearchBarProps) {
   const [query, setQuery] = useState<string>("");
+  const dispatch = useDispatch<AppDispatch>();
 
-  const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQuery(value);
-
-    if (value.trim() === "") {
-      console.log("Пустой запрос, поиск не выполняется");
+  useEffect(() => {
+    if (query.trim() === "") {
+      dispatch(setSearchQuery(""));
       return;
     }
 
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/users/search?query=${encodeURIComponent(value)}`,
-      );
-      const data = await response.json();
-      console.log("Результаты поиска:", data);
-    } catch (error) {
-      console.error("Ошибка при поиске:", error);
-    }
+    const timer = setTimeout(() => {
+      dispatch(setSearchQuery(query));
+      dispatch(searchUsers(query));
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [query, dispatch]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+  };
+
+  const handleFocus = () => {
+    onFocus?.();
+  };
+
+  const handleBlur = () => {
+    setTimeout(() => {
+      onBlur?.();
+    }, 200);
   };
 
   return (
@@ -33,6 +50,8 @@ function SearchBar() {
           className={style.searchInput}
           value={query}
           onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
         <svg
           className={style.searchIcon}

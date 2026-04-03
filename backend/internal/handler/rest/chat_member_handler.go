@@ -316,15 +316,23 @@ func (h *ChatMemberHandler) KickMember(c *gin.Context) {
 // @Tags         участники-чатов
 // @Accept       json
 // @Produce      json
-// @Success      200 {array} domain.ChatMember
+// @Success      200 {array} domain.Chat
 // @Failure      500 {object} map[string]interface{}
 // @Router       /users/chats [get]
 func (h *ChatMemberHandler) GetUserChats(c *gin.Context) {
 	currentUserID := c.GetInt64("user_id")
+	if currentUserID == 0 {
+		currentUserID = 1
+	}
 
 	chats, err := h.chatMemberService.GetUserChats(c, currentUserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if chats == nil {
+		c.JSON(http.StatusOK, []domain.Chat{})
 		return
 	}
 

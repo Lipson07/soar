@@ -5,7 +5,7 @@ import "time"
 type Chat struct {
 	ID          int64     `json:"id" db:"id"`
 	Type        string    `json:"type" db:"type" binding:"required,oneof=private group channel"`
-	Name        string    `json:"name" db:"name" binding:"required,min=2,max=255"`
+	Name        *string   `json:"name" db:"name" binding:"omitempty,min=2,max=255"`
 	Description *string   `json:"description,omitempty" db:"description" binding:"omitempty,max=500"`
 	AvatarPath  *string   `json:"avatar_path,omitempty" db:"avatar_path"`
 	CreatedBy   *int64    `json:"created_by,omitempty" db:"created_by"`
@@ -16,7 +16,7 @@ type Chat struct {
 type ChatResponse struct {
 	ID          int64     `json:"id"`
 	Type        string    `json:"type"`
-	Name        string    `json:"name"`
+	Name        *string   `json:"name,omitempty"`
 	Description *string   `json:"description,omitempty"`
 	AvatarPath  *string   `json:"avatar_path,omitempty"`
 	CreatedBy   *int64    `json:"created_by,omitempty"`
@@ -26,7 +26,7 @@ type ChatResponse struct {
 
 type CreateChatRequest struct {
 	Type        string  `json:"type" binding:"required,oneof=private group channel"`
-	Name        string  `json:"name" binding:"required,min=2,max=255"`
+	Name        *string `json:"name" binding:"omitempty,min=2,max=255"`
 	Description *string `json:"description,omitempty" binding:"omitempty,max=500"`
 }
 
