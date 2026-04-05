@@ -1,14 +1,15 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 interface User {
-  id: number;
-  name: string;
+  id: string;
+  username: string;
   email: string;
-  role: string;
-  avatar_path: string | boolean;
-  last_seen_at: string | null;
-  created_at: string;
-  updated_at: string;
+  role?: string;
+  avatar_url?: string | null;
+  last_seen?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
   is_online?: boolean;
 }
 
@@ -28,19 +29,37 @@ const initialState: SearchState = {
 
 export const searchUsers = createAsyncThunk(
   "search/searchUsers",
-  async (query: string) => {
+  async (query: string, { getState }) => {
     if (!query.trim()) return [];
 
+    const token = localStorage.getItem("token");
+
     const response = await fetch(
-      `http://localhost:8080/api/users/search?query=${encodeURIComponent(query)}`,
+      `http://localhost:8080/api/users/search?q=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      },
     );
+
+    if (response.status === 401) {
+      throw new Error("Не авторизован. Пожалуйста, войдите снова.");
+    }
+
+    if (response.status === 400) {
+      throw new Error("Некорректный поисковый запрос");
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    return data as User[];
+    const users = Array.isArray(data) ? data : data.users || [];
+
+    return users as User[];
   },
 );
 

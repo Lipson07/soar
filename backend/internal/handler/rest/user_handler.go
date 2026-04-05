@@ -1,13 +1,15 @@
 package rest
 
 import (
+	"backend/internal/domain"
+	"backend/internal/service"
 	"net/http"
-	"strconv"
-
-	"myapp/internal/domain"
-	"myapp/internal/service"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type UserHandler struct {
@@ -20,17 +22,32 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 	}
 }
 
-// Register регистрирует нового пользователя
-// @Summary      Регистрация
-// @Description  Создает нового пользователя
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        request body domain.CreateUserRequest true "Данные пользователя"
-// @Success      201  {object}  domain.User
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /register [post]
+func generateJWT(userID uuid.UUID) (string, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = "your-secret-key"
+	}
+
+	claims := jwt.MapClaims{
+		"user_id": userID.String(),
+		"exp":     time.Now().Add(time.Hour * 24).Unix(),
+		"iat":     time.Now().Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+// @Summary Регистрация
+// @Description Создает нового пользователя
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param request body domain.CreateUserRequest true "Данные пользователя"
+// @Success 201 {object} domain.User
+// @Failure 400 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
+// @Router /api/register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req domain.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -38,26 +55,29 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.Create(c, &req)
+	user, err := h.userService.Register(c.Request.Context(), &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	c.JSON(http.StatusCreated, gin.H{
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	})
 }
 
-// Login аутентифицирует пользователя
-// @Summary      Вход в систему
-// @Description  Аутентификация пользователя по email и паролю
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        request body domain.LoginRequest true "Данные для входа"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      401  {object}  map[string]interface{}
-// @Router       /login [post]
+// @Summary Вход в систему
+// @Description Аутентификация по email и паролю
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param request body domain.LoginRequest true "Данные для входа"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,118 +85,180 @@ func (h *UserHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.Authenticate(c, req.Email, req.Password)
+	user, err := h.userService.Login(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
+	token, err := generateJWT(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка генерации токена"})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "успешный вход",
-		"user":    user,
+		"token": token,
+		"user": gin.H{
+			"id":         user.ID,
+			"username":   user.Username,
+			"email":      user.Email,
+			"avatar_url": user.AvatarURL,
+			"status":     user.Status,
+			"last_seen":  user.LastSeen,
+			"created_at": user.CreatedAt,
+			"updated_at": user.UpdatedAt,
+		},
 	})
 }
 
-// SearchUsers ищет пользователей по имени или email
-// @Summary      Поиск пользователей
-// @Description  Ищет пользователей по имени или email (частичное совпадение)
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        query query string true "Поисковый запрос"
-// @Param        limit query int false "Лимит (default 20)"
-// @Param        offset query int false "Смещение (default 0)"
-// @Success      200  {array}  domain.User
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /users/search [get]
-func (h *UserHandler) SearchUsers(c *gin.Context) {
-	query := c.Query("query")
-	if query == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "поисковый запрос обязателен"})
+// @Summary Получить профиль
+// @Description Возвращает профиль авторизованного пользователя
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 401 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /api/profile [get]
+func (h *UserHandler) GetProfile(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "не авторизован"})
 		return
 	}
 
-	limit, err := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	user, err := h.userService.GetByID(c.Request.Context(), userID.(uuid.UUID))
 	if err != nil {
-		limit = 20
-	}
-	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	if err != nil {
-		offset = 0
-	}
-
-	users, err := h.userService.SearchUsers(c, query, limit, offset)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, users)
-}
-
-// GetUser возвращает пользователя по ID
-// @Summary      Получить пользователя
-// @Description  Возвращает пользователя по его ID
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        id   path      int  true  "ID пользователя"
-// @Success      200  {object}  domain.User
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
-// @Router       /users/{id} [get]
-func (h *UserHandler) GetUser(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
-		return
-	}
-
-	user, err := h.userService.GetByID(c, id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "пользователь не найден"})
 		return
 	}
 
 	c.JSON(http.StatusOK, user)
 }
 
-// GetAllUsers возвращает всех пользователей
-// @Summary      Получить всех пользователей
-// @Description  Возвращает список всех пользователей
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Success      200  {array}   domain.User
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /users [get]
+// @Summary Получить пользователя по ID
+// @Description Возвращает пользователя по ID (только для админов)
+// @Tags admin users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "ID пользователя"
+// @Success 200 {object} domain.User
+// @Failure 400 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /api/admin/users/{id} [get]
+func (h *UserHandler) GetUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID пользователя"})
+		return
+	}
+
+	user, err := h.userService.GetByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "пользователь не найден"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}
+
+// @Summary Получить всех пользователей
+// @Description Возвращает список всех пользователей (только для админов)
+// @Tags admin users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} domain.User
+// @Failure 403 {object} map[string]interface{}
+// @Router /api/admin/users [get]
 func (h *UserHandler) GetAllUsers(c *gin.Context) {
-	users, err := h.userService.GetAll(c)
+	users, err := h.userService.GetAll(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, users)
 }
 
-// UpdateUser обновляет пользователя
-// @Summary      Обновить пользователя
-// @Description  Обновляет данные существующего пользователя
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        id      path      int                       true  "ID пользователя"
-// @Param        request body      domain.UpdateUserRequest true  "Новые данные"
-// @Success      200     {object}  domain.User
-// @Failure      400     {object}  map[string]interface{}
-// @Failure      404     {object}  map[string]interface{}
-// @Failure      500     {object}  map[string]interface{}
-// @Router       /users/{id} [put]
-func (h *UserHandler) UpdateUser(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+// @Summary Поиск пользователей
+// @Description Ищет пользователей по username
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param q query string true "Поисковый запрос"
+// @Success 200 {array} domain.User
+// @Failure 400 {object} map[string]interface{}
+// @Router /api/users/search [get]
+func (h *UserHandler) SearchUsers(c *gin.Context) {
+	query := c.Query("q")
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "параметр q обязателен"})
+		return
+	}
+
+	users, err := h.userService.Search(c.Request.Context(), query)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+// @Summary Обновить статус
+// @Description Обновляет статус пользователя (online/offline/away)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body object true "Статус"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /api/profile/status [put]
+func (h *UserHandler) UpdateStatus(c *gin.Context) {
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	err := h.userService.UpdateStatus(c.Request.Context(), userID.(uuid.UUID), req.Status)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "статус обновлен"})
+}
+
+// @Summary Обновить пользователя
+// @Description Обновляет данные пользователя по ID (только для админов)
+// @Tags admin users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "ID пользователя"
+// @Param request body domain.UpdateUserRequest true "Данные для обновления"
+// @Success 200 {object} domain.User
+// @Failure 400 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /api/admin/users/{id} [put]
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID пользователя"})
 		return
 	}
 
@@ -186,35 +268,38 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.userService.Update(c, id, &req)
+	user, err := h.userService.Update(c.Request.Context(), userID, &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, user)
 }
 
-// DeleteUser удаляет пользователя
-// @Summary      Удалить пользователя
-// @Description  Удаляет пользователя по ID
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        id   path      int  true  "ID пользователя"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /users/{id} [delete]
+// @Summary Удалить пользователя
+// @Description Удаляет пользователя по ID (только для админов)
+// @Tags admin users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "ID пользователя"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /api/admin/users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	userIDStr := c.Param("id")
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID пользователя"})
 		return
 	}
 
-	if err := h.userService.Delete(c, id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	err = h.userService.Delete(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 

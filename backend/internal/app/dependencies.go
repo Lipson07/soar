@@ -1,9 +1,9 @@
 package app
 
 import (
-	"myapp/internal/handler/rest"
-	"myapp/internal/repository/postgres"
-	"myapp/internal/service"
+	"backend/internal/handler/rest"
+	"backend/internal/repository/postgres"
+	"backend/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
@@ -13,19 +13,26 @@ import (
 
 func initDependencies(db *sqlx.DB) *gin.Engine {
 
-	userRepo := postgres.NewUserRepository(db)
+userRepo := postgres.NewUserRepository(db)
 	chatRepo := postgres.NewChatRepository(db)
-	chatMemberRepo := postgres.NewChatMemberRepository(db)
+	participantRepo := postgres.NewParticipantRepository(db)
+	messageRepo := postgres.NewMessageRepository(db)
+
 	userService := service.NewUserService(userRepo)
-	chatService := service.NewChatService(chatRepo, chatMemberRepo)
-	chatMemberService := service.NewChatMemberService(chatMemberRepo, chatRepo, userRepo, db)
+	chatService := service.NewChatService(chatRepo, participantRepo, userRepo, messageRepo)
+	participantService := service.NewParticipantService(participantRepo, chatRepo, userRepo,messageRepo)
+	messageService := service.NewMessageService(messageRepo, participantRepo, chatRepo)
+
 	userHandler := rest.NewUserHandler(userService)
 	chatHandler := rest.NewChatHandler(chatService)
-	chatMemberHandler := rest.NewChatMemberHandler(chatMemberService)
+	participantHandler := rest.NewParticipantHandler(participantService)
+	messageHandler := rest.NewMessageHandler(messageService)
+
 	router := rest.SetupRouter(
 		userHandler,
 		chatHandler,
-		chatMemberHandler,
+		participantHandler,
+		messageHandler,
 	)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

@@ -1,10 +1,12 @@
 package postgres
 
 import (
+	"backend/internal/domain"
 	"context"
-	"fmt"
-	"myapp/internal/domain"
+	"database/sql"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -18,105 +20,81 @@ func NewChatRepository(db *sqlx.DB) *ChatRepository {
 
 func (r *ChatRepository) Create(ctx context.Context, chat *domain.Chat) error {
 	query := `
-        INSERT INTO chats (type, name, description, avatar_path, created_by, created_at, updated_at) 
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-        RETURNING id, created_at, updated_at
-    `
-	err := r.db.QueryRowContext(
-		ctx, query,
-		chat.Type, chat.Name, chat.Description, chat.AvatarPath, chat.CreatedBy,
-	).Scan(&chat.ID, &chat.CreatedAt, &chat.UpdatedAt)
-
-	if err != nil {
-		return fmt.Errorf("ошибка создания: %w", err)
-	}
-	return nil
+		INSERT INTO chats (id, name, type, creator_id, avatar_url, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`
+	_, err := r.db.ExecContext(ctx, query,
+		chat.ID, chat.Name, chat.Type, chat.CreatorID, chat.AvatarURL, chat.CreatedAt, chat.UpdatedAt,
+	)
+	return err
 }
 
-func (r *ChatRepository) GetByID(ctx context.Context, id int64) (*domain.Chat, error) {
-	query := `
-        SELECT id, type, name, description, avatar_path, created_by, created_at, updated_at 
-        FROM chats 
-        WHERE id = $1
-    `
-
+func (r *ChatRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Chat, error) {
+	query := `SELECT id, name, type, creator_id, avatar_url, created_at, updated_at, last_message_at FROM chats WHERE id = $1`
 	var chat domain.Chat
 	err := r.db.GetContext(ctx, &chat, query, id)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка получения чата по ID %d: %w", id, err)
+	if err == sql.ErrNoRows {
+		return nil, domain.ErrChatNotFound
 	}
-
-	return &chat, nil
+	return &chat, err
 }
 
-func (r *ChatRepository) GetByName(ctx context.Context, name string) (*domain.Chat, error) {
+func (r *ChatRepository) GetPrivateChatByUsers(ctx context.Context, user1ID, user2ID uuid.UUID) (*domain.Chat, error) {
 	query := `
-        SELECT id, type, name, description, avatar_path, created_by, created_at, updated_at 
-        FROM chats 
-        WHERE name = $1
-    `
-
+		SELECT c.id, c.name, c.type, c.creator_id, c.avatar_url, c.created_at, c.updated_at, c.last_message_at
+		FROM chats c
+		JOIN participants p1 ON p1.chat_id = c.id
+		JOIN participants p2 ON p2.chat_id = c.id
+		WHERE c.type = $1 
+		AND p1.user_id = $2 
+		AND p2.user_id = $3
+		LIMIT 1
+	`
 	var chat domain.Chat
-	err := r.db.GetContext(ctx, &chat, query, name)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка получения чата по имени %s: %w", name, err)
+	err := r.db.GetContext(ctx, &chat, query, domain.ChatTypePrivate, user1ID, user2ID)
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-
-	return &chat, nil
+	return &chat, err
 }
 
-func (r *ChatRepository) GetAll(ctx context.Context) ([]domain.Chat, error) {
+func (r *ChatRepository) GetUserChats(ctx context.Context, userID uuid.UUID) ([]*domain.Chat, error) {
 	query := `
-        SELECT id, type, name, description, avatar_path, created_by, created_at, updated_at 
-        FROM chats 
-        ORDER BY id
-    `
+		SELECT c.id, c.name, c.type, c.creator_id, c.avatar_url, c.created_at, c.updated_at, c.last_message_at
+		FROM chats c
+		JOIN participants p ON p.chat_id = c.id
+		WHERE p.user_id = $1
+		ORDER BY c.updated_at DESC
+	`
+	var chats []*domain.Chat
+	err := r.db.SelectContext(ctx, &chats, query, userID)
+	return chats, err
+}
 
-	var chats []domain.Chat
+func (r *ChatRepository) GetAll(ctx context.Context) ([]*domain.Chat, error) {
+	query := `SELECT id, name, type, creator_id, avatar_url, created_at, updated_at, last_message_at FROM chats ORDER BY created_at DESC`
+	var chats []*domain.Chat
 	err := r.db.SelectContext(ctx, &chats, query)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка получения всех чатов: %w", err)
-	}
-
-	return chats, nil
+	return chats, err
 }
 
 func (r *ChatRepository) Update(ctx context.Context, chat *domain.Chat) error {
 	query := `
-        UPDATE chats 
-        SET type = $1, name = $2, description = $3, avatar_path = $4, created_by = $5, updated_at = NOW()
-        WHERE id = $6
-        RETURNING updated_at
-    `
-
-	err := r.db.QueryRowContext(
-		ctx, query,
-		chat.Type, chat.Name, chat.Description, chat.AvatarPath, chat.CreatedBy, chat.ID,
-	).Scan(&chat.UpdatedAt)
-
-	if err != nil {
-		return fmt.Errorf("ошибка обновления чата с ID %d: %w", chat.ID, err)
-	}
-
-	return nil
+		UPDATE chats SET name = $1, avatar_url = $2, updated_at = $3
+		WHERE id = $4
+	`
+	_, err := r.db.ExecContext(ctx, query, chat.Name, chat.AvatarURL, chat.UpdatedAt, chat.ID)
+	return err
 }
 
-func (r *ChatRepository) Delete(ctx context.Context, id int64) error {
+func (r *ChatRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM chats WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
+}
 
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("ошибка удаления чата с ID %d: %w", id, err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("ошибка получения количества удаленных строк: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("чат с ID %d не найден", id)
-	}
-
-	return nil
+func (r *ChatRepository) UpdateLastMessage(ctx context.Context, chatID uuid.UUID, lastMessageAt time.Time) error {
+	query := `UPDATE chats SET last_message_at = $1, updated_at = $1 WHERE id = $2`
+	_, err := r.db.ExecContext(ctx, query, lastMessageAt, chatID)
+	return err
 }

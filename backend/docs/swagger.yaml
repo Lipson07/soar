@@ -1,107 +1,100 @@
 basePath: /api
 definitions:
-  domain.AddMemberRequest:
+  domain.AddParticipantsRequest:
     properties:
-      role:
-        enum:
-        - admin
-        - member
-        type: string
-      user_id:
-        type: integer
+      user_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
     required:
-    - user_id
+    - user_ids
     type: object
   domain.Chat:
     properties:
-      avatar_path:
+      avatar_url:
         type: string
       created_at:
         type: string
-      created_by:
-        type: integer
-      description:
-        maxLength: 500
+      creator_id:
         type: string
       id:
-        type: integer
+        type: string
+      last_message_at:
+        type: string
       name:
-        maxLength: 255
-        minLength: 2
         type: string
       type:
-        enum:
-        - private
-        - group
-        - channel
-        type: string
+        $ref: '#/definitions/domain.ChatType'
       updated_at:
         type: string
-    required:
-    - name
-    - type
     type: object
-  domain.ChatMember:
+  domain.ChatResponse:
     properties:
-      chat_id:
-        type: integer
+      avatar_url:
+        type: string
+      creator_id:
+        type: string
       id:
-        type: integer
-      joined_at:
         type: string
-      last_read_at:
-        type: string
-      role:
-        enum:
-        - owner
-        - admin
-        - member
-        type: string
-      user_id:
-        type: integer
-    required:
-    - role
-    type: object
-  domain.CreateChatRequest:
-    properties:
-      description:
-        maxLength: 500
+      last_message:
+        $ref: '#/definitions/domain.MessageInfo'
+      last_message_at:
         type: string
       name:
-        maxLength: 255
-        minLength: 2
         type: string
       type:
-        enum:
-        - private
-        - group
-        - channel
+        $ref: '#/definitions/domain.ChatType'
+      unread_count:
+        type: integer
+      updated_at:
         type: string
+    type: object
+  domain.ChatType:
+    enum:
+    - private
+    - group
+    type: string
+    x-enum-varnames:
+    - ChatTypePrivate
+    - ChatTypeGroup
+  domain.CreateGroupChatRequest:
+    properties:
+      avatar_url:
+        type: string
+      name:
+        type: string
+      user_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
     required:
     - name
-    - type
+    - user_ids
+    type: object
+  domain.CreatePrivateChatRequest:
+    properties:
+      user_id:
+        type: string
+    required:
+    - user_id
     type: object
   domain.CreateUserRequest:
     properties:
       email:
         type: string
-      name:
-        minLength: 2
-        type: string
       password:
         minLength: 6
         type: string
-      role:
-        enum:
-        - user
-        - admin
-        - moderator
+      username:
+        maxLength: 100
+        minLength: 3
         type: string
     required:
     - email
-    - name
     - password
-    - role
+    - username
     type: object
   domain.LoginRequest:
     properties:
@@ -113,76 +106,113 @@ definitions:
     - email
     - password
     type: object
-  domain.UpdateChatRequest:
+  domain.Message:
     properties:
-      avatar_path:
+      chat_id:
         type: string
-      description:
-        maxLength: 500
+      created_at:
         type: string
-      name:
-        maxLength: 255
-        minLength: 2
+      deleted_at:
+        type: string
+      id:
+        type: string
+      is_edited:
+        type: boolean
+      reply_to:
+        type: string
+      text:
+        type: string
+      updated_at:
+        type: string
+      user_id:
         type: string
     type: object
-  domain.UpdateMemberRoleRequest:
+  domain.MessageInfo:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      text:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.Participant:
+    properties:
+      chat_id:
+        type: string
+      id:
+        type: string
+      joined_at:
+        type: string
+      last_read_at:
+        type: string
+      role:
+        description: admin, member
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.SendMessageRequest:
+    properties:
+      reply_to:
+        type: string
+      text:
+        type: string
+    required:
+    - text
+    type: object
+  domain.UpdateChatRequest:
+    properties:
+      avatar_url:
+        type: string
+      name:
+        type: string
+    type: object
+  domain.UpdateRoleRequest:
     properties:
       role:
         enum:
         - admin
         - member
         type: string
+      user_id:
+        type: string
     required:
     - role
+    - user_id
     type: object
   domain.UpdateUserRequest:
     properties:
-      avatar:
-        type: boolean
-      avatar_path:
+      avatar_url:
         type: string
       email:
         type: string
-      name:
-        minLength: 2
+      status:
         type: string
-      role:
-        enum:
-        - user
-        - admin
-        - moderator
+      username:
         type: string
     type: object
   domain.User:
     properties:
-      avatar:
-        type: boolean
-      avatar_path:
+      avatar_url:
         type: string
       created_at:
         type: string
       email:
         type: string
-      email_verified_at:
-        type: string
       id:
-        type: integer
-      is_online:
-        type: boolean
-      last_seen_at:
         type: string
-      name:
-        maxLength: 255
-        minLength: 2
+      last_seen:
         type: string
-      role:
+      status:
+        description: online, offline, away
         type: string
       updated_at:
         type: string
-    required:
-    - email
-    - name
-    - role
+      username:
+        type: string
     type: object
 host: backend-1-8qiq.onrender.com
 info:
@@ -198,11 +228,11 @@ info:
   title: MyApp API
   version: 1.0.0
 paths:
-  /chats:
+  /api/admin/chats:
     get:
       consumes:
       - application/json
-      description: Возвращает список всех чатов
+      description: Возвращает список всех чатов (только для админов)
       produces:
       - application/json
       responses:
@@ -212,392 +242,27 @@ paths:
             items:
               $ref: '#/definitions/domain.Chat'
             type: array
-        "500":
-          description: Internal Server Error
+        "403":
+          description: Forbidden
           schema:
             additionalProperties: true
             type: object
+      security:
+      - BearerAuth: []
       summary: Получить все чаты
       tags:
-      - chats
-    post:
-      consumes:
-      - application/json
-      description: Создает новый чат (private, group или channel)
-      parameters:
-      - description: Данные чата
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/domain.CreateChatRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/domain.Chat'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Создание чата
-      tags:
-      - chats
-  /chats/{chat_id}/leave:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Выйти из чата
-      tags:
-      - участники-чатов
-  /chats/{chat_id}/members:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/domain.ChatMember'
-            type: array
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Получить всех участников чата
-      tags:
-      - участники-чатов
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      - description: Данные участника
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/domain.AddMemberRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/domain.ChatMember'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Добавить участника в чат
-      tags:
-      - участники-чатов
-  /chats/{chat_id}/members/{user_id}:
+      - admin chats
+  /api/admin/chats/{id}:
     delete:
       consumes:
       - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      - description: ID пользователя
-        in: path
-        name: user_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Удалить участника из чата
-      tags:
-      - участники-чатов
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      - description: ID пользователя
-        in: path
-        name: user_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.ChatMember'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Получить информацию об участнике
-      tags:
-      - участники-чатов
-  /chats/{chat_id}/members/{user_id}/kick:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      - description: ID пользователя
-        in: path
-        name: user_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Исключить участника из чата
-      tags:
-      - участники-чатов
-  /chats/{chat_id}/members/{user_id}/role:
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      - description: ID пользователя
-        in: path
-        name: user_id
-        required: true
-        type: integer
-      - description: Новая роль
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/domain.UpdateMemberRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Обновить роль участника
-      tags:
-      - участники-чатов
-  /chats/{chat_id}/members/bulk:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      - description: Список ID пользователей
-        in: body
-        name: request
-        required: true
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Массовое добавление участников
-      tags:
-      - участники-чатов
-  /chats/{chat_id}/members/count:
-    get:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: integer
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Получить количество участников чата
-      tags:
-      - участники-чатов
-  /chats/{chat_id}/read:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID чата
-        in: path
-        name: chat_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Обновить время последнего прочтения
-      tags:
-      - участники-чатов
-  /chats/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Удаляет чат по ID
+      description: Удаляет чат по ID (только для админов)
       parameters:
       - description: ID чата
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -611,60 +276,32 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
         "404":
           description: Not Found
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
+      security:
+      - BearerAuth: []
       summary: Удалить чат
       tags:
-      - chats
-    get:
-      consumes:
-      - application/json
-      description: Возвращает чат по его ID
-      parameters:
-      - description: ID чата
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.Chat'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Получить чат
-      tags:
-      - chats
+      - admin chats
     put:
       consumes:
       - application/json
-      description: Обновляет данные существующего чата
+      description: Обновляет данные чата по ID (только для админов)
       parameters:
       - description: ID чата
         in: path
         name: id
         required: true
-        type: integer
-      - description: Новые данные
+        type: string
+      - description: Данные для обновления
         in: body
         name: request
         required: true
@@ -682,33 +319,54 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
         "404":
           description: Not Found
           schema:
             additionalProperties: true
             type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
+      security:
+      - BearerAuth: []
       summary: Обновить чат
       tags:
-      - chats
-  /chats/by-name:
+      - admin chats
+  /api/admin/users:
     get:
       consumes:
       - application/json
-      description: Возвращает чат по его названию
+      description: Возвращает список всех пользователей (только для админов)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.User'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить всех пользователей
+      tags:
+      - admin users
+  /api/admin/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пользователя по ID (только для админов)
       parameters:
-      - description: Название чата
-        in: query
-        name: name
+      - description: ID пользователя
+        in: path
+        name: id
         required: true
         type: string
       produces:
@@ -716,6 +374,207 @@ paths:
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удалить пользователя
+      tags:
+      - admin users
+    get:
+      consumes:
+      - application/json
+      description: Возвращает пользователя по ID (только для админов)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить пользователя по ID
+      tags:
+      - admin users
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные пользователя по ID (только для админов)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить пользователя
+      tags:
+      - admin users
+  /api/chats:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает все чаты, в которых участвует пользователь
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.ChatResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить чаты пользователя
+      tags:
+      - chats
+  /api/chats/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает чат по ID
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить чат
+      tags:
+      - chats
+  /api/chats/group:
+    post:
+      consumes:
+      - application/json
+      description: Создает групповой чат с участниками
+      parameters:
+      - description: Данные группы
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateGroupChatRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Chat'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создать групповой чат
+      tags:
+      - chats
+  /api/chats/private:
+    post:
+      consumes:
+      - application/json
+      description: Создает чат между двумя пользователями
+      parameters:
+      - description: ID собеседника
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreatePrivateChatRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
           schema:
             $ref: '#/definitions/domain.Chat'
         "400":
@@ -728,14 +587,16 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Получить чат по имени
+      security:
+      - BearerAuth: []
+      summary: Создать личный чат
       tags:
       - chats
-  /login:
+  /api/login:
     post:
       consumes:
       - application/json
-      description: Аутентификация пользователя по email и паролю
+      description: Аутентификация по email и паролю
       parameters:
       - description: Данные для входа
         in: body
@@ -764,7 +625,456 @@ paths:
       summary: Вход в систему
       tags:
       - users
-  /register:
+  /api/messages:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет сообщение (своё или если вы админ)
+      parameters:
+      - description: ID сообщения
+        in: query
+        name: message_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удалить сообщение
+      tags:
+      - messages
+    get:
+      consumes:
+      - application/json
+      description: Возвращает сообщения чата с пагинацией
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      - description: Лимит (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Смещение (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Message'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить сообщения
+      tags:
+      - messages
+    post:
+      consumes:
+      - application/json
+      description: Отправляет сообщение в чат
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      - description: Текст сообщения
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Message'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Отправить сообщение
+      tags:
+      - messages
+    put:
+      consumes:
+      - application/json
+      description: Редактирует текст отправленного сообщения
+      parameters:
+      - description: ID сообщения
+        in: query
+        name: message_id
+        required: true
+        type: string
+      - description: Новый текст
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Редактировать сообщение
+      tags:
+      - messages
+  /api/participants:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пользователя из группового чата
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      - description: ID пользователя
+        in: query
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удалить участника
+      tags:
+      - participants
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех участников чата
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Participant'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить участников чата
+      tags:
+      - participants
+    post:
+      consumes:
+      - application/json
+      description: Добавляет пользователей в групповой чат
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      - description: Список ID пользователей
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AddParticipantsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Добавить участников
+      tags:
+      - participants
+  /api/participants/leave:
+    post:
+      consumes:
+      - application/json
+      description: Пользователь выходит из группового чата
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Выйти из чата
+      tags:
+      - participants
+  /api/participants/read:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет время последнего прочтения сообщений в чате
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить прочтение
+      tags:
+      - participants
+  /api/participants/role:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет роль участника в чате (admin/member)
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      - description: user_id и role
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить роль
+      tags:
+      - participants
+  /api/participants/unread:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает количество непрочитанных сообщений в чате
+      parameters:
+      - description: ID чата
+        in: query
+        name: chat_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Непрочитанные сообщения
+      tags:
+      - participants
+  /api/profile:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает профиль авторизованного пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить профиль
+      tags:
+      - users
+  /api/profile/status:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет статус пользователя (online/offline/away)
+      parameters:
+      - description: Статус
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить статус
+      tags:
+      - users
+  /api/register:
     post:
       consumes:
       - application/json
@@ -788,179 +1098,25 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
+        "409":
+          description: Conflict
           schema:
             additionalProperties: true
             type: object
       summary: Регистрация
       tags:
       - users
-  /users:
+  /api/users/search:
     get:
       consumes:
       - application/json
-      description: Возвращает список всех пользователей
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/domain.User'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Получить всех пользователей
-      tags:
-      - users
-  /users/{id}:
-    delete:
-      consumes:
-      - application/json
-      description: Удаляет пользователя по ID
-      parameters:
-      - description: ID пользователя
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Удалить пользователя
-      tags:
-      - users
-    get:
-      consumes:
-      - application/json
-      description: Возвращает пользователя по его ID
-      parameters:
-      - description: ID пользователя
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.User'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Получить пользователя
-      tags:
-      - users
-    put:
-      consumes:
-      - application/json
-      description: Обновляет данные существующего пользователя
-      parameters:
-      - description: ID пользователя
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Новые данные
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/domain.UpdateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/domain.User'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Обновить пользователя
-      tags:
-      - users
-  /users/chats:
-    get:
-      consumes:
-      - application/json
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/domain.ChatMember'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Получить все чаты пользователя
-      tags:
-      - участники-чатов
-  /users/search:
-    get:
-      consumes:
-      - application/json
-      description: Ищет пользователей по имени или email (частичное совпадение)
+      description: Ищет пользователей по username
       parameters:
       - description: Поисковый запрос
         in: query
-        name: query
+        name: q
         required: true
         type: string
-      - description: Лимит (default 20)
-        in: query
-        name: limit
-        type: integer
-      - description: Смещение (default 0)
-        in: query
-        name: offset
-        type: integer
       produces:
       - application/json
       responses:
@@ -975,11 +1131,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
+      security:
+      - BearerAuth: []
       summary: Поиск пользователей
       tags:
       - users

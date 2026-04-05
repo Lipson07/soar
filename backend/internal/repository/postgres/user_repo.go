@@ -1,11 +1,11 @@
 package postgres
 
 import (
+	"backend/internal/domain"
 	"context"
 	"database/sql"
-	"fmt"
-	"myapp/internal/domain"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -19,130 +19,88 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `
-        INSERT INTO users (name, email, password, role, avatar, created_at, updated_at) 
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-        RETURNING id, created_at, updated_at
-    `
-
-	err := r.db.QueryRowContext(
-		ctx, query,
-		user.Name, user.Email, user.Password, user.Role, user.Avatar,
-	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
-
-	if err != nil {
-		return fmt.Errorf("ошибка создания: %w", err)
-	}
-	return nil
+		INSERT INTO users (id, username, email, password_hash, avatar_url, status, last_seen, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+	_, err := r.db.ExecContext(ctx, query,
+		user.ID, user.Username, user.Email, user.Password,
+		user.AvatarURL, user.Status, user.LastSeen, user.CreatedAt, user.UpdatedAt,
+	)
+	return err
 }
 
-func (r *UserRepository) GetByID(ctx context.Context, id int64) (*domain.User, error) {
+func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	query := `SELECT id, username, email, password_hash, avatar_url, status, last_seen, created_at, updated_at FROM users WHERE id = $1`
 	var user domain.User
-	query := `SELECT * FROM users WHERE id = $1`
-
 	err := r.db.GetContext(ctx, &user, query, id)
 	if err == sql.ErrNoRows {
-		return nil, domain.ErrUserNotFound
+		return nil, nil
 	}
-	if err != nil {
-		return nil, fmt.Errorf("ошибка получения: %w", err)
-	}
-	return &user, nil
+	return &user, err
 }
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	query := `SELECT id, username, email, password_hash, avatar_url, status, last_seen, created_at, updated_at FROM users WHERE email = $1`
 	var user domain.User
-	query := `SELECT * FROM users WHERE email = $1`
-
 	err := r.db.GetContext(ctx, &user, query, email)
 	if err == sql.ErrNoRows {
-		return nil, domain.ErrUserNotFound
+		return nil, nil
 	}
-	if err != nil {
-		return nil, fmt.Errorf("ошибка получения: %w", err)
-	}
-	return &user, nil
+	return &user, err
 }
 
-func (r *UserRepository) GetAll(ctx context.Context) ([]domain.User, error) {
-	var users []domain.User
-	query := `SELECT id, name, email, role, avatar, last_seen_at, is_online, created_at FROM users ORDER BY id`
+func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+	query := `SELECT id, username, email, password_hash, avatar_url, status, last_seen, created_at, updated_at FROM users WHERE username = $1`
+	var user domain.User
+	err := r.db.GetContext(ctx, &user, query, username)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &user, err
+}
 
+func (r *UserRepository) GetAll(ctx context.Context) ([]*domain.User, error) {
+	query := `SELECT id, username, email, password_hash, avatar_url, status, last_seen, created_at, updated_at FROM users ORDER BY created_at DESC`
+	var users []*domain.User
 	err := r.db.SelectContext(ctx, &users, query)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка получения списка: %w", err)
-	}
-	return users, nil
+	return users, err
 }
 
-func (r *UserRepository) Search(ctx context.Context, query string, limit, offset int) ([]domain.User, error) {
-	var users []domain.User
-	sqlQuery := `
-		SELECT id, name, email, email_verified_at, role, avatar, avatar_path, 
-		       last_seen_at, is_online, remember_token, created_at, updated_at
-		FROM users
-		WHERE email ILIKE $1 OR name ILIKE $1
-		ORDER BY name
-		LIMIT $2 OFFSET $3
+func (r *UserRepository) Search(ctx context.Context, query string) ([]*domain.User, error) {
+	searchQuery := `
+		SELECT id, username, email, password_hash, avatar_url, status, last_seen, created_at, updated_at 
+		FROM users 
+		WHERE username ILIKE $1 OR email ILIKE $1 
+		ORDER BY username 
+		LIMIT 20
 	`
-
-	searchPattern := "%" + query + "%"
-	err := r.db.SelectContext(ctx, &users, sqlQuery, searchPattern, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка поиска пользователей: %w", err)
-	}
-
-	return users, nil
+	var users []*domain.User
+	err := r.db.SelectContext(ctx, &users, searchQuery, "%"+query+"%")
+	return users, err
 }
+
 func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
 	query := `
-        UPDATE users SET
-            name = COALESCE($1, name),
-            email = COALESCE($2, email),
-            role = COALESCE($3, role),
-            avatar = COALESCE($4, avatar),
-            updated_at = NOW()
-        WHERE id = $5
-        RETURNING updated_at
-    `
-	err := r.db.QueryRowContext(ctx, query,
-		user.Name, user.Email, user.Role, user.Avatar, user.ID,
-	).Scan(&user.UpdatedAt)
-
-	if err == sql.ErrNoRows {
-		return domain.ErrUserNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("ошибка обновления: %w", err)
-	}
-	return nil
+		UPDATE users SET username = $1, email = $2, password_hash = $3, 
+		avatar_url = $4, status = $5, last_seen = $6, updated_at = $7
+		WHERE id = $8
+	`
+	_, err := r.db.ExecContext(ctx, query,
+		user.Username, user.Email, user.Password,
+		user.AvatarURL, user.Status, user.LastSeen, user.UpdatedAt, user.ID,
+	)
+	return err
 }
 
-func (r *UserRepository) UpdatePassword(ctx context.Context, userID int64, hashedPassword string) error {
-	query := `UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2`
-
-	result, err := r.db.ExecContext(ctx, query, hashedPassword, userID)
-	if err != nil {
-		return fmt.Errorf("ошибка обновления пароля: %w", err)
-	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return domain.ErrUserNotFound
-	}
-	return nil
-}
-
-func (r *UserRepository) Delete(ctx context.Context, id int64) error {
+func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query := `DELETE FROM users WHERE id = $1`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
+}
 
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("ошибка удаления: %w", err)
-	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return domain.ErrUserNotFound
-	}
-	return nil
+func (r *UserRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)`
+	var exists bool
+	err := r.db.GetContext(ctx, &exists, query, id)
+	return exists, err
 }

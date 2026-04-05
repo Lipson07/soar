@@ -1,12 +1,13 @@
 package service
 
 import (
+	"backend/internal/domain"
+	"backend/internal/repository"
 	"context"
 	"fmt"
+	"time"
 
-	"myapp/internal/domain"
-	"myapp/internal/repository"
-
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,155 +21,115 @@ func NewUserService(userRepo repository.UserRepository) UserService {
 	}
 }
 
-const bcryptCost = 10
-
-func (s *userService) Create(ctx context.Context, req *domain.CreateUserRequest) (*domain.User, error) {
-	if req.Name == "" || len(req.Name) < 2 {
-		return nil, fmt.Errorf("имя должно быть минимум 2 символа")
-	}
-	if len(req.Password) < 6 {
-		return nil, fmt.Errorf("пароль должен быть минимум 6 символов")
+func (s *userService) Register(ctx context.Context, req *domain.CreateUserRequest) (*domain.User, error) {
+	exists, _ := s.userRepo.GetByEmail(ctx, req.Email)
+	if exists != nil {
+		return nil, fmt.Errorf("ошибка почты")
 	}
 
-	existing, _ := s.userRepo.GetByEmail(ctx, req.Email)
-	if existing != nil {
-		return nil, domain.ErrEmailAlreadyExists
+	exists, _ = s.userRepo.GetByUsername(ctx, req.Username)
+	if exists != nil {
+			return nil, fmt.Errorf("ошибка имени")
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка хеширования пароля: %w", err)
+		return nil, err
 	}
 
 	user := &domain.User{
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: string(hashedPassword),
-		Role:     req.Role,
-		Avatar:   false,
+		ID:        uuid.New(),
+		Username:  req.Username,
+		Email:     req.Email,
+		Password:  string(hashedPassword),
+		Status:    "offline",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
-	user.Password = ""
 	return user, nil
 }
 
-func (s *userService) GetByID(ctx context.Context, id int64) (*domain.User, error) {
-	if id <= 0 {
-		return nil, domain.ErrInvalidID
+func (s *userService) Login(ctx context.Context, req *domain.LoginRequest) (*domain.User, error) {
+	user, err := s.userRepo.GetByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, domain.ErrInvalidCredentials
 	}
 
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		return nil, domain.ErrInvalidCredentials
+	}
+
+	return user, nil
+}
+
+func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	return s.userRepo.GetByID(ctx, id)
+}
+
+func (s *userService) GetByUsername(ctx context.Context, username string) (*domain.User, error) {
+	return s.userRepo.GetByUsername(ctx, username)
+}
+
+func (s *userService) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
+	return s.userRepo.GetByEmail(ctx, email)
+}
+
+func (s *userService) GetAll(ctx context.Context) ([]*domain.User, error) {
+	return s.userRepo.GetAll(ctx)
+}
+
+func (s *userService) Update(ctx context.Context, id uuid.UUID, req *domain.UpdateUserRequest) (*domain.User, error) {
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	user.Password = ""
-	return user, nil
-}
-
-func (s *userService) GetAll(ctx context.Context) ([]domain.User, error) {
-	users, err := s.userRepo.GetAll(ctx)
-	if err != nil {
-		return nil, err
+	if req.Username != nil {
+		user.Username = *req.Username
 	}
-
-	for i := range users {
-		users[i].Password = ""
-	}
-	return users, nil
-}
-
-func (s *userService) SearchUsers(ctx context.Context, query string, limit, offset int) ([]domain.User, error) {
-	if query == "" {
-		return []domain.User{}, nil
-	}
-
-	if limit <= 0 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	if offset < 0 {
-		offset = 0
-	}
-
-	users, err := s.userRepo.Search(ctx, query, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка поиска пользователей: %w", err)
-	}
-
-	for i := range users {
-		users[i].Password = ""
-	}
-
-	return users, nil
-}
-
-func (s *userService) Update(ctx context.Context, id int64, req *domain.UpdateUserRequest) (*domain.User, error) {
-	user, err := s.userRepo.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	if req.Name != nil {
-		if *req.Name == "" {
-			return nil, fmt.Errorf("имя не может быть пустым")
-		}
-		user.Name = *req.Name
-	}
-
 	if req.Email != nil {
-		if *req.Email == "" {
-			return nil, fmt.Errorf("email не может быть пустым")
-		}
-		if *req.Email != user.Email {
-			existing, _ := s.userRepo.GetByEmail(ctx, *req.Email)
-			if existing != nil {
-				return nil, domain.ErrEmailAlreadyExists
-			}
-		}
 		user.Email = *req.Email
 	}
-
-	if req.Role != nil {
-		user.Role = *req.Role
+	if req.AvatarURL != nil {
+		user.AvatarURL = req.AvatarURL
 	}
-
-	if req.Avatar != nil {
-		user.Avatar = *req.Avatar
+	if req.Status != nil {
+		user.Status = *req.Status
 	}
+	user.UpdatedAt = time.Now()
 
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return nil, err
 	}
 
-	user.Password = ""
 	return user, nil
 }
 
-func (s *userService) Delete(ctx context.Context, id int64) error {
-	if id <= 0 {
-		return domain.ErrInvalidID
+func (s *userService) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	user, err := s.userRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
 	}
+
+	user.Status = status
+	user.UpdatedAt = time.Now()
+
+	return s.userRepo.Update(ctx, user)
+}
+
+func (s *userService) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.userRepo.Delete(ctx, id)
 }
 
-func (s *userService) Authenticate(ctx context.Context, email, password string) (*domain.User, error) {
-	user, err := s.userRepo.GetByEmail(ctx, email)
-	if err != nil {
-		return nil, domain.ErrInvalidCredentials
-	}
+func (s *userService) Search(ctx context.Context, query string) ([]*domain.User, error) {
+	return s.userRepo.Search(ctx, query)
+}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		return nil, domain.ErrInvalidCredentials
-	}
-
-	user.Password = ""
-	return user, nil
+func (s *userService) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
+	return s.userRepo.Exists(ctx, id)
 }

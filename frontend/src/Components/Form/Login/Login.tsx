@@ -69,26 +69,55 @@ const Login = () => {
       console.log("Ответ от сервера:", data);
 
       if (!response.ok) {
-        dispatch(setError(data.message || "Ошибка входа"));
+        dispatch(setError(data.message || data.error || "Ошибка входа"));
         return;
       }
+
+      // Получаем токен из ответа
+      const token = data.token;
+      console.log("Получен токен:", token);
+
+      if (!token) {
+        console.error("Токен не получен от сервера!");
+        dispatch(setError("Ошибка авторизации: токен не получен"));
+        return;
+      }
+
+      // Получаем данные пользователя
       const userData = data.user || data;
+      console.log("Данные пользователя:", userData);
 
-      dispatch(
-        setUser({
-          id: userData.id,
-          email: userData.email,
-          name: userData.name || userData.email,
-          role: userData.role || "user",
-          avatar_path: userData.avatar_path || false,
-          last_seen_at: userData.last_seen_at || null,
-          created_at: userData.created_at,
-          updated_at: userData.updated_at,
-        }),
-      );
+      // Адаптируем данные из Go бэкенда
+      const adaptedUser = {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        avatar_url: userData.avatar_url || null,
+        last_seen: userData.last_seen || null,
+        created_at: userData.created_at,
+        updated_at: userData.updated_at,
+        status: userData.status || "offline",
+        role: userData.role || "user",
+      };
 
-      console.log("Вход успешен:", data);
-      navigate("/main");
+      // Сохраняем токен в localStorage (СРАЗУ ПОСЛЕ ПОЛУЧЕНИЯ)
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(adaptedUser));
+
+      // Проверяем, что токен сохранился
+      const savedToken = localStorage.getItem("token");
+      console.log("Токен сохранен в localStorage:", savedToken);
+      console.log("Сохраненный пользователь:", localStorage.getItem("user"));
+
+      // Сохраняем в Redux
+      dispatch(setUser({ user: adaptedUser, token: token }));
+
+      console.log("Вход успешен!");
+
+      // Небольшая задержка перед переходом, чтобы убедиться, что все сохранилось
+      setTimeout(() => {
+        navigate("/main");
+      }, 100);
     } catch (error) {
       console.error("Ошибка входа:", error);
       dispatch(setError("Ошибка соединения с сервером"));
@@ -168,6 +197,8 @@ const Login = () => {
       >
         <h1>Вход в систему</h1>
 
+        {error && <div className={style.errorMessage}>{error}</div>}
+
         <Input
           background="#333333"
           color="white"
@@ -196,7 +227,7 @@ const Login = () => {
           <button type="button" className={style.qr}>
             QR
           </button>
-          <button type="submit" className={style.vhod}>
+          <button type="submit" className={style.vhod} disabled={loading}>
             {loading ? "Вход..." : "Войти"}
           </button>
         </div>

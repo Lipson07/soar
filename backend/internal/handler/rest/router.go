@@ -3,11 +3,9 @@ package rest
 import (
 	"github.com/gin-gonic/gin"
 )
-
 type RouteRegistrar interface {
 	RegisterRoutes(public, protected *gin.RouterGroup)
 }
-
 func SetupRouter(registrars ...RouteRegistrar) *gin.Engine {
 	router := gin.Default()
 
@@ -29,46 +27,54 @@ func SetupRouter(registrars ...RouteRegistrar) *gin.Engine {
 
 	return router
 }
-
 func (h *UserHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	public.POST("/register", h.Register)
 	public.POST("/login", h.Login)
 
 	users := protected.Group("/users")
 	{
+		users.GET("/profile", h.GetProfile)
 		users.GET("/", h.GetAllUsers)
-		users.GET("/:id", h.GetUser)
 		users.GET("/search", h.SearchUsers)
+		users.GET("/:id", h.GetUser)
 		users.PUT("/:id", h.UpdateUser)
 		users.DELETE("/:id", h.DeleteUser)
+		users.PUT("/profile/status", h.UpdateStatus)
 	}
 }
 
 func (h *ChatHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	chats := protected.Group("/chats")
 	{
-		chats.POST("/", h.Create)
-		chats.GET("/", h.GetAll)
-		chats.GET("/:chat_id", h.GetByID)
-		chats.GET("/by-name", h.GetByName)
-		chats.PUT("/:chat_id", h.Update)
-		chats.DELETE("/:chat_id", h.Delete)
+		chats.POST("/private", h.CreatePrivateChat)
+		chats.POST("/group", h.CreateGroupChat)
+		chats.GET("/", h.GetUserChats)
+		chats.GET("/all", h.GetAllChats)
+		chats.GET("/:id", h.GetChatByID)
+		chats.PUT("/:id", h.UpdateChat)
+		chats.DELETE("/:id", h.DeleteChat)
 	}
 }
-func (h *ChatMemberHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
-	members := protected.Group("/chats/:chat_id/members")
-	{
-		members.POST("", h.AddMember)
-		members.POST("/bulk", h.AddMembers)
-		members.GET("", h.GetChatMembers)
-		members.GET("/count", h.GetMemberCount)
-		members.GET("/:user_id", h.GetMember)
-		members.PUT("/:user_id/role", h.UpdateMemberRole)
-		members.DELETE("/:user_id", h.RemoveMember)
-		members.POST("/:user_id/kick", h.KickMember)
-	}
 
-	protected.POST("/chats/:chat_id/read", h.UpdateLastRead)
-	protected.POST("/chats/:chat_id/leave", h.LeaveChat)
-	protected.GET("/users/chats", h.GetUserChats)
+func (h *ParticipantHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	participants := protected.Group("/participants")
+	{
+		participants.POST("/", h.AddParticipants)
+		participants.DELETE("/", h.RemoveParticipant)
+		participants.POST("/leave", h.LeaveChat)
+		participants.GET("/", h.GetChatParticipants)
+		participants.PUT("/role", h.UpdateRole)
+		participants.PUT("/read", h.UpdateLastRead)
+		participants.GET("/unread", h.GetUnreadCount)
+	}
+}
+
+func (h *MessageHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	messages := protected.Group("/messages")
+	{
+		messages.POST("/", h.SendMessage)
+		messages.GET("/", h.GetMessages)
+		messages.PUT("/", h.EditMessage)
+		messages.DELETE("/", h.DeleteMessage)
+	}
 }

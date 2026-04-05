@@ -1,42 +1,57 @@
 package service
 
 import (
+	"backend/internal/domain"
 	"context"
-	"myapp/internal/domain"
+
+	"github.com/google/uuid"
 )
 
 type UserService interface {
-	Create(ctx context.Context, req *domain.CreateUserRequest) (*domain.User, error)
-	GetByID(ctx context.Context, id int64) (*domain.User, error)
-	GetAll(ctx context.Context) ([]domain.User, error)
-	Update(ctx context.Context, id int64, req *domain.UpdateUserRequest) (*domain.User, error)
-	Delete(ctx context.Context, id int64) error
-	Authenticate(ctx context.Context, email, password string) (*domain.User, error)
-	SearchUsers(ctx context.Context, query string, limit, offset int) ([]domain.User, error)
-}
-type ChatService interface {
-	Create(ctx context.Context, req *domain.CreateChatRequest, userID int64) (*domain.Chat, error)
-	GetByID(ctx context.Context, id int64) (*domain.Chat, error)
-	GetByName(ctx context.Context, name string) (*domain.Chat, error)
-	GetAll(ctx context.Context) ([]domain.Chat, error)
-	Update(ctx context.Context, id int64, req *domain.UpdateChatRequest) (*domain.Chat, error)
-	Delete(ctx context.Context, id int64) error
+	Register(ctx context.Context, req *domain.CreateUserRequest) (*domain.User, error)
+	Login(ctx context.Context, req *domain.LoginRequest) (*domain.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	GetByUsername(ctx context.Context, username string) (*domain.User, error)
+	GetByEmail(ctx context.Context, email string) (*domain.User, error)
+	GetAll(ctx context.Context) ([]*domain.User, error)
+	Update(ctx context.Context, id uuid.UUID, req *domain.UpdateUserRequest) (*domain.User, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	Search(ctx context.Context, query string) ([]*domain.User, error)
+	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
-type ChatMemberService interface {
-	AddMembers(ctx context.Context, chatID int64, userIDs []int64, currentUserID int64) error
-	AddMember(ctx context.Context, chatID int64, req *domain.AddMemberRequest, currentUserID int64) (*domain.ChatMember, error)
-	GetMember(ctx context.Context, chatID, userID int64) (*domain.ChatMember, error)
-	GetChatMembers(ctx context.Context, chatID int64) ([]domain.ChatMember, error)
-	GetUserChats(ctx context.Context, userID int64) ([]domain.Chat, error)
-	GetMemberCount(ctx context.Context, chatID int64) (int, error)
-	UpdateMemberRole(ctx context.Context, chatID, userID int64, req *domain.UpdateMemberRoleRequest, currentUserID int64) error
-	UpdateLastRead(ctx context.Context, chatID, userID int64) error
-	RemoveMember(ctx context.Context, chatID, userID int64, currentUserID int64) error
-	LeaveChat(ctx context.Context, chatID, userID int64) error
-	KickMember(ctx context.Context, chatID, userID int64, currentUserID int64) error
-	IsMember(ctx context.Context, chatID, userID int64) (bool, error)
-	IsAdmin(ctx context.Context, chatID, userID int64) (bool, error)
-	IsOwner(ctx context.Context, chatID, userID int64) (bool, error)
-	GetUserRole(ctx context.Context, chatID, userID int64) (string, error)
+type ChatService interface {
+	CreatePrivateChat(ctx context.Context, creatorID, userID uuid.UUID) (*domain.Chat, error)
+	CreateGroupChat(ctx context.Context, req *domain.CreateGroupChatRequest, creatorID uuid.UUID) (*domain.Chat, error)
+	GetChatByID(ctx context.Context, chatID uuid.UUID) (*domain.Chat, error)
+	GetUserChats(ctx context.Context, userID uuid.UUID) ([]*domain.ChatResponse, error)
+	GetAllChats(ctx context.Context) ([]*domain.Chat, error)
+	UpdateChat(ctx context.Context, chatID uuid.UUID, req *domain.UpdateChatRequest) (*domain.Chat, error)
+	DeleteChat(ctx context.Context, chatID uuid.UUID) error
+	AddParticipants(ctx context.Context, chatID uuid.UUID, userIDs []uuid.UUID, adderID uuid.UUID) error
+	RemoveParticipant(ctx context.Context, chatID, userID, removerID uuid.UUID) error
+	LeaveChat(ctx context.Context, chatID, userID uuid.UUID) error
+}
+
+type ParticipantService interface {
+	AddParticipant(ctx context.Context, chatID, userID, adderID uuid.UUID) error
+	AddParticipants(ctx context.Context, chatID uuid.UUID, userIDs []uuid.UUID, adderID uuid.UUID) error
+	RemoveParticipant(ctx context.Context, chatID, userID, removerID uuid.UUID) error
+	LeaveChat(ctx context.Context, chatID, userID uuid.UUID) error
+	GetChatParticipants(ctx context.Context, chatID uuid.UUID) ([]*domain.Participant, error)
+	GetUserChats(ctx context.Context, userID uuid.UUID) ([]*domain.Participant, error)
+	IsParticipant(ctx context.Context, chatID, userID uuid.UUID) (bool, error)
+	UpdateRole(ctx context.Context, chatID, userID, updaterID uuid.UUID, role string) error
+	UpdateLastRead(ctx context.Context, chatID, userID uuid.UUID) error
+	GetUnreadCount(ctx context.Context, chatID, userID uuid.UUID) (int, error)
+}
+
+type MessageService interface {
+	SendMessage(ctx context.Context, chatID uuid.UUID, req *domain.SendMessageRequest, senderID uuid.UUID) (*domain.Message, error)
+	GetMessages(ctx context.Context, chatID uuid.UUID, userID uuid.UUID, limit, offset int) ([]*domain.Message, error)
+	EditMessage(ctx context.Context, messageID uuid.UUID, newText string, userID uuid.UUID) error
+	DeleteMessage(ctx context.Context, messageID uuid.UUID, userID uuid.UUID) error
+	GetMessageByID(ctx context.Context, messageID uuid.UUID) (*domain.Message, error)
+	GetChatMessages(ctx context.Context, chatID uuid.UUID, limit, offset int) ([]*domain.Message, error)
 }

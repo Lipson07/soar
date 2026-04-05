@@ -1,44 +1,54 @@
 package repository
 
 import (
+	"backend/internal/domain"
 	"context"
-	"myapp/internal/domain"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type UserRepository interface {
 	Create(ctx context.Context, user *domain.User) error
-	GetByID(ctx context.Context, id int64) (*domain.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
-	GetAll(ctx context.Context) ([]domain.User, error)
+	GetByUsername(ctx context.Context, username string) (*domain.User, error)
+	GetAll(ctx context.Context) ([]*domain.User, error)
+	Search(ctx context.Context, query string) ([]*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
-	UpdatePassword(ctx context.Context, userID int64, hashedPassword string) error
-	Delete(ctx context.Context, id int64) error
-	Search(ctx context.Context, query string, limit, offset int) ([]domain.User, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+	Exists(ctx context.Context, id uuid.UUID) (bool, error)
 }
+
 type ChatRepository interface {
-	Create(ctx context.Context, user *domain.Chat) error
-	GetByID(ctx context.Context, id int64) (*domain.Chat, error)
-	GetByName(ctx context.Context, email string) (*domain.Chat, error)
-	GetAll(ctx context.Context) ([]domain.Chat, error)
-	Update(ctx context.Context, user *domain.Chat) error
-	Delete(ctx context.Context, id int64) error
+	Create(ctx context.Context, chat *domain.Chat) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Chat, error)
+	GetPrivateChatByUsers(ctx context.Context, user1ID, user2ID uuid.UUID) (*domain.Chat, error)
+	GetUserChats(ctx context.Context, userID uuid.UUID) ([]*domain.Chat, error)
+	GetAll(ctx context.Context) ([]*domain.Chat, error)
+	Update(ctx context.Context, chat *domain.Chat) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	UpdateLastMessage(ctx context.Context, chatID uuid.UUID, lastMessageAt time.Time) error
 }
-type ChatMemberRepository interface {
-	Create(ctx context.Context, member *domain.ChatMember) error
-	GetByID(ctx context.Context, id int64) (*domain.ChatMember, error)
-	GetByChatAndUser(ctx context.Context, chatID, userID int64) (*domain.ChatMember, error)
-	GetByChatID(ctx context.Context, chatID int64) ([]domain.ChatMember, error)
-	GetByUserID(ctx context.Context, userID int64) ([]domain.ChatMember, error)
-	Update(ctx context.Context, member *domain.ChatMember) error
-	UpdateRole(ctx context.Context, chatID, userID int64, role string) error
-	UpdateLastReadAt(ctx context.Context, chatID, userID int64) error
-	Delete(ctx context.Context, id int64) error
-	DeleteByChatAndUser(ctx context.Context, chatID, userID int64) error
-	DeleteAllByChatID(ctx context.Context, chatID int64) error
-	Exists(ctx context.Context, chatID, userID int64) (bool, error)
-	CountMembers(ctx context.Context, chatID int64) (int, error)
-	GetUserRole(ctx context.Context, chatID, userID int64) (string, error)
-	IsMember(ctx context.Context, chatID, userID int64) (bool, error)
-	IsOwner(ctx context.Context, chatID, userID int64) (bool, error)
-	IsAdmin(ctx context.Context, chatID, userID int64) (bool, error)
+
+type ParticipantRepository interface {
+	Add(ctx context.Context, participant *domain.Participant) error
+	Remove(ctx context.Context, chatID, userID uuid.UUID) error
+	GetByChatID(ctx context.Context, chatID uuid.UUID) ([]*domain.Participant, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Participant, error)
+	IsParticipant(ctx context.Context, chatID, userID uuid.UUID) (bool, error)
+	IsAdmin(ctx context.Context, chatID, userID uuid.UUID) (bool, error)
+	GetByChatAndUser(ctx context.Context, chatID, userID uuid.UUID) (*domain.Participant, error)
+	Update(ctx context.Context, participant *domain.Participant) error
+	UpdateLastRead(ctx context.Context, chatID, userID uuid.UUID, lastReadAt time.Time) error
+	GetUnreadCount(ctx context.Context, chatID, userID uuid.UUID, lastReadAt time.Time) (int, error)
+}
+
+type MessageRepository interface {
+	Create(ctx context.Context, message *domain.Message) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Message, error)
+	GetByChatID(ctx context.Context, chatID uuid.UUID, limit, offset int) ([]*domain.Message, error)
+	Update(ctx context.Context, message *domain.Message) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	GetLastMessage(ctx context.Context, chatID uuid.UUID) (*domain.MessageInfo, error)
 }

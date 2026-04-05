@@ -1,3 +1,4 @@
-DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS password_reset_tokens;
+DROP INDEX IF EXISTS idx_users_status;
+DROP INDEX IF EXISTS idx_users_username;
+DROP INDEX IF EXISTS idx_users_email;
 DROP TABLE IF EXISTS users;

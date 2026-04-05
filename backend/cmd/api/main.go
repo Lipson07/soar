@@ -1,9 +1,9 @@
 package main
 
 import (
+	_ "backend/docs"
+	"backend/internal/app"
 	"log"
-	_ "myapp/docs"
-	"myapp/internal/app"
 )
 
 // @title           MyApp API

@@ -6,45 +6,60 @@ import {
   selectSearchQuery,
   clearResults,
 } from "../../../store/searchSlice";
+import {
+  toggleChat,
+  selectCurrentChat,
+  selectIsChatOpen,
+} from "../../../store/selectedChatSlice";
 import style from "./ChatList.module.scss";
 import SearchBar from "../SearchBar/SearchBar";
 import StoriesSection from "../StoriesSection/StoriesSection";
 import { useState, useEffect } from "react";
 
 interface User {
-  id: number;
-  name: string;
+  id: string;
+  username: string;
   email: string;
-  role: string;
-  avatar_path: string | boolean;
-  last_seen_at: string | null;
-  created_at: string;
-  updated_at: string;
+  role?: string;
+  avatar_url: string | null;
+  last_seen?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  status?: string;
   is_online?: boolean;
 }
 
 interface Chat {
-  id: number;
+  id: string;
   type: string;
   name: string | null;
-  description: string | null;
-  avatar_path: string | null;
-  created_by: number | null;
+  creator_id: string;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  last_message_at: string | null;
+  last_message?: {
+    id: string;
+    text: string;
+    user_id: string;
+    created_at: string;
+  } | null;
+  unread_count?: number;
 }
 
 function ChatList() {
   const dispatch = useDispatch();
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [activeChatId, setActiveChatId] = useState<number | null>(null);
   const [myChats, setMyChats] = useState<Chat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [usersCache, setUsersCache] = useState<Map<string, User>>(new Map());
 
   const searchResults = useSelector(selectSearchResults);
   const searchLoading = useSelector(selectSearchLoading);
   const searchQuery = useSelector(selectSearchQuery);
+  const currentChat = useSelector(selectCurrentChat);
+  const isChatOpen = useSelector(selectIsChatOpen);
 
   const showSearchResults = isSearchFocused && searchQuery.trim() !== "";
 
@@ -59,22 +74,30 @@ function ChatList() {
 
   const fetchMyChats = async () => {
     try {
-      const response = await fetch("http://localhost:8080/api/chats/");
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        console.error("Токен не найден");
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch("http://localhost:8080/api/chats/", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
       if (response.ok) {
         const data = await response.json();
-        const chats = Array.isArray(data) ? data : [];
+        const chats: Chat[] = Array.isArray(data) ? data : [];
 
-        const userStr = localStorage.getItem("user");
-        let userId = null;
-        if (userStr) {
-          const user = JSON.parse(userStr);
-          userId = user.id;
-        }
-
-        const filteredChats = chats.filter(
-          (chat: Chat) => chat.created_by === userId,
-        );
-        setMyChats(filteredChats);
+        const enrichedChats = await enrichPrivateChatNames(chats, token);
+        setMyChats(enrichedChats);
+      } else {
+        console.error("Ошибка при получении чатов:", response.status);
       }
     } catch (error) {
       console.error("Ошибка:", error);
@@ -82,7 +105,64 @@ function ChatList() {
       setLoading(false);
     }
   };
-  const formatDate = (dateString: string) => {
+
+  const enrichPrivateChatNames = async (chats: Chat[], token: string) => {
+    const enriched = [...chats];
+
+    for (let i = 0; i < enriched.length; i++) {
+      const chat = enriched[i];
+
+      if (chat.type === "private" && (!chat.name || chat.name === "")) {
+        try {
+          const participantsResponse = await fetch(
+            `http://localhost:8080/api/participants?chat_id=${chat.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          );
+
+          if (participantsResponse.ok) {
+            const participants = await participantsResponse.json();
+            const otherParticipant = participants.find(
+              (p: any) => p.user_id !== currentUserId,
+            );
+
+            if (otherParticipant) {
+              let user = usersCache.get(otherParticipant.user_id);
+
+              if (!user) {
+                const userResponse = await fetch(
+                  `http://localhost:8080/api/users/${otherParticipant.user_id}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  },
+                );
+                if (userResponse.ok) {
+                  user = await userResponse.json();
+                  setUsersCache((prev) => new Map(prev).set(user.id, user));
+                }
+              }
+
+              if (user) {
+                enriched[i].name = user.username;
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Ошибка получения имени для чата:", chat.id, error);
+        }
+      }
+    }
+
+    return enriched;
+  };
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "";
     const date = new Date(dateString);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -120,24 +200,49 @@ function ChatList() {
 
   const getChatName = (chat: Chat) => {
     if (chat.type === "private") {
-      return "Приватный чат";
+      return chat.name || "Приватный чат";
     }
     return chat.name || "Без названия";
   };
 
+  const getLastMessageText = (chat: Chat) => {
+    if (chat.last_message && chat.last_message.text) {
+      return chat.last_message.text;
+    }
+    return "Нет сообщений";
+  };
+
   const handleUserClick = (user: User) => {
-    setActiveChatId(user.id);
+    const chat: Chat = {
+      id: user.id,
+      type: "private",
+      name: user.username,
+      creator_id: currentUserId || "",
+      avatar_url: user.avatar_url ?? null,
+      created_at: user.created_at || new Date().toISOString(),
+      updated_at: user.updated_at || new Date().toISOString(),
+      last_message_at: null,
+      unread_count: 0,
+    };
+
+    dispatch(toggleChat(chat));
     setIsSearchFocused(false);
     dispatch(clearResults());
-    console.log("Выбран пользователь:", user.name);
   };
 
   const handleChatClick = (chat: Chat) => {
-    setActiveChatId(chat.id);
-    console.log("Выбран чат:", getChatName(chat));
+    dispatch(toggleChat(chat));
+  };
+
+  const isChatActive = (chatId: string) => {
+    return isChatOpen && currentChat?.id === chatId;
   };
 
   const renderChatAvatar = (chat: Chat) => {
+    if (chat.avatar_url) {
+      return <img src={chat.avatar_url} alt={getChatName(chat)} />;
+    }
+
     return (
       <div className={style.avatarPlaceholder}>
         {getInitials(getChatName(chat))}
@@ -146,21 +251,19 @@ function ChatList() {
   };
 
   const renderAvatar = (user: User) => {
-    const avatarUrl =
-      typeof user.avatar_path === "string" && user.avatar_path
-        ? user.avatar_path
-        : null;
+    const avatarUrl = user.avatar_url;
+    const displayName = user.username;
 
     if (avatarUrl) {
-      return <img src={avatarUrl} alt={user.name} />;
+      return <img src={avatarUrl} alt={displayName} />;
     }
 
     return (
-      <div className={style.avatarPlaceholder}>{getInitials(user.name)}</div>
+      <div className={style.avatarPlaceholder}>{getInitials(displayName)}</div>
     );
   };
 
-  const formatLastSeen = (dateString: string | null) => {
+  const formatLastSeen = (dateString: string | null | undefined) => {
     if (!dateString) return "Никогда";
     const date = new Date(dateString);
     const now = new Date();
@@ -233,18 +336,22 @@ function ChatList() {
                 {searchResults.map((user) => (
                   <div
                     key={user.id}
-                    className={`${style.chatItem} ${activeChatId === user.id ? style.active : ""}`}
+                    className={`${style.chatItem} ${
+                      isChatActive(user.id) ? style.active : ""
+                    }`}
                     onClick={() => handleUserClick(user)}
                   >
                     <div className={style.avatar}>
                       {renderAvatar(user)}
-                      {user.is_online && <div className={style.onlineBadge} />}
+                      {user.status === "online" && (
+                        <div className={style.onlineBadge} />
+                      )}
                     </div>
                     <div className={style.chatInfo}>
                       <div className={style.chatHeader}>
-                        <div className={style.chatName}>{user.name}</div>
+                        <div className={style.chatName}>{user.username}</div>
                         <div className={style.timestamp}>
-                          {formatLastSeen(user.last_seen_at)}
+                          {formatLastSeen(user.last_seen)}
                         </div>
                       </div>
                       <div className={style.messagePreview}>
@@ -289,7 +396,9 @@ function ChatList() {
               myChats.map((chat) => (
                 <div
                   key={chat.id}
-                  className={`${style.chatItem} ${activeChatId === chat.id ? style.active : ""}`}
+                  className={`${style.chatItem} ${
+                    isChatActive(chat.id) ? style.active : ""
+                  }`}
                   onClick={() => handleChatClick(chat)}
                 >
                   <div className={style.avatar}>{renderChatAvatar(chat)}</div>
@@ -297,13 +406,18 @@ function ChatList() {
                     <div className={style.chatHeader}>
                       <div className={style.chatName}>{getChatName(chat)}</div>
                       <div className={style.timestamp}>
-                        {formatDate(chat.updated_at)}
+                        {formatDate(chat.last_message_at || chat.updated_at)}
                       </div>
                     </div>
                     <div className={style.messagePreview}>
                       <div className={style.lastMessage}>
-                        {chat.description || "Нет описания"}
+                        {getLastMessageText(chat)}
                       </div>
+                      {chat.unread_count && chat.unread_count > 0 && (
+                        <div className={style.unreadBadge}>
+                          {chat.unread_count}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

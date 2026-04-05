@@ -1,13 +1,12 @@
 package rest
 
 import (
+	"backend/internal/domain"
+	"backend/internal/service"
 	"net/http"
-	"strconv"
-
-	"myapp/internal/domain"
-	"myapp/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type ChatHandler struct {
@@ -20,40 +19,47 @@ func NewChatHandler(chatService service.ChatService) *ChatHandler {
 	}
 }
 
-// Create создает новый чат
-// @Summary      Создание чата
-// @Description  Создает новый чат (private, group или channel)
+// CreatePrivateChat создает личный чат
+// @Summary      Создать личный чат
+// @Description  Создает приватный чат между текущим пользователем и указанным пользователем
 // @Tags         chats
 // @Accept       json
 // @Produce      json
-// @Param        request body domain.CreateChatRequest true "Данные чата"
-// @Success      201  {object}  domain.Chat
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      409  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /chats [post]
-func (h *ChatHandler) Create(c *gin.Context) {
-	var req domain.CreateChatRequest
+// @Security     BearerAuth
+// @Param        request body domain.CreatePrivateChatRequest true "ID собеседника"
+// @Success      201 {object} domain.Chat
+// @Failure      400 {object} map[string]interface{}
+// @Failure      401 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/chats/private [post]
+func (h *ChatHandler) CreatePrivateChat(c *gin.Context) {
+	var req domain.CreatePrivateChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	userID := c.GetInt64("user_id")
-	if userID == 0 {
-		userID = 1
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
+		return
 	}
 
-	chat, err := h.chatService.Create(c, &req, userID)
+	// Конвертируем строку в UUID (так как middleware сохраняет строку)
+	userIDStr, ok := userIDValue.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неверный тип ID пользователя"})
+		return
+	}
+
+	creatorID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		if err == domain.ErrChatNameExists {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-			return
-		}
-		if err == domain.ErrInvalidChatType {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неверный формат ID пользователя"})
+		return
+	}
+
+	chat, err := h.chatService.CreatePrivateChat(c.Request.Context(), creatorID, req.UserID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -61,105 +67,147 @@ func (h *ChatHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, chat)
 }
 
-// GetByID возвращает чат по ID
-// @Summary      Получить чат
-// @Description  Возвращает чат по его ID
+// CreateGroupChat создает групповой чат
+// @Summary      Создать групповой чат
+// @Description  Создает групповой чат с указанными участниками
 // @Tags         chats
 // @Accept       json
 // @Produce      json
-// @Param        id   path      int  true  "ID чата"
-// @Success      200  {object}  domain.Chat
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
-// @Router       /chats/{id} [get]
-func (h *ChatHandler) GetByID(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+// @Security     BearerAuth
+// @Param        request body domain.CreateGroupChatRequest true "Данные группы"
+// @Success      201 {object} domain.Chat
+// @Failure      400 {object} map[string]interface{}
+// @Failure      401 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/chats/group [post]
+func (h *ChatHandler) CreateGroupChat(c *gin.Context) {
+	var req domain.CreateGroupChatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	chat, err := h.chatService.GetByID(c, id)
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
+		return
+	}
+
+	userIDStr, ok := userIDValue.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неверный тип ID пользователя"})
+		return
+	}
+
+	creatorID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		if err == domain.ErrChatNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неверный формат ID пользователя"})
+		return
+	}
+
+	chat, err := h.chatService.CreateGroupChat(c.Request.Context(), &req, creatorID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, chat)
+	c.JSON(http.StatusCreated, chat)
 }
 
-// GetByName возвращает чат по имени
-// @Summary      Получить чат по имени
-// @Description  Возвращает чат по его названию
+// GetUserChats возвращает все чаты пользователя
+// @Summary      Получить чаты пользователя
+// @Description  Возвращает все чаты, в которых участвует текущий пользователь
 // @Tags         chats
 // @Accept       json
 // @Produce      json
-// @Param        name   query      string  true  "Название чата"
-// @Success      200  {object}  domain.Chat
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
-// @Router       /chats/by-name [get]
-func (h *ChatHandler) GetByName(c *gin.Context) {
-	name := c.Query("name")
-	if name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "не указано название чата"})
+// @Security     BearerAuth
+// @Success      200 {array} domain.ChatResponse
+// @Failure      401 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/chats [get]
+func (h *ChatHandler) GetUserChats(c *gin.Context) {
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
 		return
 	}
 
-	chat, err := h.chatService.GetByName(c, name)
+	userIDStr, ok := userIDValue.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неверный тип ID пользователя"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		if err == domain.ErrChatNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неверный формат ID пользователя"})
+		return
+	}
+
+	chats, err := h.chatService.GetUserChats(c.Request.Context(), userID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, chat)
-}
-
-// GetAll возвращает все чаты
-// @Summary      Получить все чаты
-// @Description  Возвращает список всех чатов
-// @Tags         chats
-// @Accept       json
-// @Produce      json
-// @Success      200  {array}   domain.Chat
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /chats [get]
-func (h *ChatHandler) GetAll(c *gin.Context) {
-	chats, err := h.chatService.GetAll(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if chats == nil {
+		c.JSON(http.StatusOK, []domain.ChatResponse{})
 		return
 	}
 
 	c.JSON(http.StatusOK, chats)
 }
 
-// Update обновляет чат
-// @Summary      Обновить чат
-// @Description  Обновляет данные существующего чата
+// GetChatByID возвращает чат по ID
+// @Summary      Получить чат по ID
+// @Description  Возвращает информацию о чате по его ID
 // @Tags         chats
 // @Accept       json
 // @Produce      json
-// @Param        id      path      int                       true  "ID чата"
-// @Param        request body      domain.UpdateChatRequest true  "Новые данные"
-// @Success      200     {object}  domain.Chat
-// @Failure      400     {object}  map[string]interface{}
-// @Failure      404     {object}  map[string]interface{}
-// @Failure      409     {object}  map[string]interface{}
-// @Failure      500     {object}  map[string]interface{}
-// @Router       /chats/{id} [put]
-func (h *ChatHandler) Update(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+// @Security     BearerAuth
+// @Param        id path string true "ID чата"
+// @Success      200 {object} domain.Chat
+// @Failure      400 {object} map[string]interface{}
+// @Failure      401 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/chats/{id} [get]
+func (h *ChatHandler) GetChatByID(c *gin.Context) {
+	chatIDStr := c.Param("id")
+	chatID, err := uuid.Parse(chatIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID чата"})
+		return
+	}
+
+	chat, err := h.chatService.GetChatByID(c.Request.Context(), chatID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, chat)
+}
+
+// UpdateChat обновляет чат
+// @Summary      Обновить чат
+// @Description  Обновляет данные чата по ID (только для администраторов)
+// @Tags         chats
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID чата"
+// @Param        request body domain.UpdateChatRequest true "Данные для обновления"
+// @Success      200 {object} domain.Chat
+// @Failure      400 {object} map[string]interface{}
+// @Failure      401 {object} map[string]interface{}
+// @Failure      403 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/chats/{id} [put]
+func (h *ChatHandler) UpdateChat(c *gin.Context) {
+	chatIDStr := c.Param("id")
+	chatID, err := uuid.Parse(chatIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID чата"})
 		return
 	}
 
@@ -169,50 +217,64 @@ func (h *ChatHandler) Update(c *gin.Context) {
 		return
 	}
 
-	chat, err := h.chatService.Update(c, id, &req)
+	chat, err := h.chatService.UpdateChat(c.Request.Context(), chatID, &req)
 	if err != nil {
-		if err == domain.ErrChatNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
-		if err == domain.ErrChatNameExists {
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.JSON(http.StatusOK, chat)
 }
 
-// Delete удаляет чат
+// DeleteChat удаляет чат
 // @Summary      Удалить чат
-// @Description  Удаляет чат по ID
+// @Description  Удаляет чат по ID (только для администраторов)
 // @Tags         chats
 // @Accept       json
 // @Produce      json
-// @Param        id   path      int  true  "ID чата"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      400  {object}  map[string]interface{}
-// @Failure      404  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]interface{}
-// @Router       /chats/{id} [delete]
-func (h *ChatHandler) Delete(c *gin.Context) {
-	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+// @Security     BearerAuth
+// @Param        id path string true "ID чата"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{}
+// @Failure      401 {object} map[string]interface{}
+// @Failure      403 {object} map[string]interface{}
+// @Failure      404 {object} map[string]interface{}
+// @Router       /api/chats/{id} [delete]
+func (h *ChatHandler) DeleteChat(c *gin.Context) {
+	chatIDStr := c.Param("id")
+	chatID, err := uuid.Parse(chatIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный ID чата"})
 		return
 	}
 
-	if err := h.chatService.Delete(c, id); err != nil {
-		if err == domain.ErrChatNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-			return
-		}
+	err = h.chatService.DeleteChat(c.Request.Context(), chatID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "чат успешно удален"})
+}
+
+// GetAllChats возвращает все чаты
+// @Summary      Получить все чаты
+// @Description  Возвращает список всех чатов (только для администраторов)
+// @Tags         admin
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.Chat
+// @Failure      401 {object} map[string]interface{}
+// @Failure      403 {object} map[string]interface{}
+// @Failure      500 {object} map[string]interface{}
+// @Router       /api/admin/chats [get]
+func (h *ChatHandler) GetAllChats(c *gin.Context) {
+	chats, err := h.chatService.GetAllChats(c.Request.Context())
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "чат удален"})
+	c.JSON(http.StatusOK, chats)
 }

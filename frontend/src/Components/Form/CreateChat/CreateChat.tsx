@@ -7,10 +7,11 @@ import {
 import style from "./CreateChat.module.scss";
 
 interface User {
-  id: number;
-  name: string;
+  id: string;
+  username: string;
   email: string;
-  avatar_path: string | boolean;
+  avatar_url: string | null;
+  status: string;
 }
 
 function CreateChat() {
@@ -25,6 +26,15 @@ function CreateChat() {
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setCurrentUserId(user.id);
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -47,13 +57,20 @@ function CreateChat() {
     const timer = setTimeout(async () => {
       setSearchLoading(true);
       try {
+        const token = localStorage.getItem("token");
         const response = await fetch(
-          `http://localhost:8080/api/users/search?query=${encodeURIComponent(searchQuery)}`,
+          `http://localhost:8080/api/users/search?q=${encodeURIComponent(searchQuery)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
         );
         const data = await response.json();
         const users = Array.isArray(data) ? data : [];
         const filtered = users.filter(
           (user: User) =>
+            user.id !== currentUserId &&
             !selectedUsers.some((selected) => selected.id === user.id),
         );
         setSearchResults(filtered);
@@ -66,7 +83,7 @@ function CreateChat() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedUsers]);
+  }, [searchQuery, selectedUsers, currentUserId]);
 
   const resetForm = () => {
     setChatName("");
@@ -78,7 +95,7 @@ function CreateChat() {
     setIsSubmitting(false);
   };
 
-  const handleOverlayClick = (e: any) => {
+  const handleOverlayClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       dispatch(closeCreateChat());
     }
@@ -94,86 +111,89 @@ function CreateChat() {
     setSearchResults([]);
   };
 
-  const handleRemoveUser = (userId: number) => {
+  const handleRemoveUser = (userId: string) => {
     setSelectedUsers(selectedUsers.filter((u) => u.id !== userId));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (chatType !== "private" && !chatName.trim()) {
+    if (chatType === "group" && !chatName.trim()) {
       alert("Введите название чата");
       return;
     }
 
-    if (selectedUsers.length === 0) {
+    if (selectedUsers.length === 0 && chatType === "group") {
       alert("Выберите хотя бы одного участника");
+      return;
+    }
+
+    if (chatType === "private" && selectedUsers.length === 0) {
+      alert("Выберите пользователя для личного чата");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const userStr = localStorage.getItem("user");
-      let currentUserId = null;
-      let currentUser = null;
-      if (userStr) {
-        currentUser = JSON.parse(userStr);
-        currentUserId = currentUser.id;
-      }
+      const token = localStorage.getItem("token");
 
-      const requestBody: any = {
-        type: chatType,
-        description: description || null,
-      };
+      if (chatType === "private") {
+        const response = await fetch(
+          "http://localhost:8080/api/chats/private",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              user_id: selectedUsers[0].id,
+            }),
+          },
+        );
 
-      if (chatType === "group") {
-        requestBody.name = chatName;
-      }
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Ошибка создания чата");
+        }
 
-      const chatResponse = await fetch("http://localhost:8080/api/chats/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!chatResponse.ok) {
-        const error = await chatResponse.json();
-        throw new Error(error.error || "Ошибка создания чата");
-      }
-
-      const chat = await chatResponse.json();
-
-      // Добавляем всех выбранных пользователей + текущего
-      const allUserIds = [...selectedUsers.map((u) => u.id)];
-      if (currentUserId && !allUserIds.includes(currentUserId)) {
-        allUserIds.push(currentUserId);
-      }
-
-      if (allUserIds.length > 0) {
-        await fetch(`http://localhost:8080/api/chats/${chat.id}/members/bulk`, {
+        alert("Чат успешно создан!");
+        dispatch(closeCreateChat());
+        window.location.reload();
+      } else {
+        const response = await fetch("http://localhost:8080/api/chats/group", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            user_ids: allUserIds,
+            name: chatName,
+            user_ids: selectedUsers.map((u) => u.id),
+            avatar_url: null,
           }),
         });
-      }
 
-      alert("Чат успешно создан!");
-      dispatch(closeCreateChat());
-      window.location.reload();
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Ошибка создания группы");
+        }
+
+        alert("Группа успешно создана!");
+        dispatch(closeCreateChat());
+        window.location.reload();
+      }
     } catch (error) {
       console.error("Ошибка:", error);
-      alert("Ошибка при создании чата");
+      alert(
+        error instanceof Error ? error.message : "Ошибка при создании чата",
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
+
   if (!isOpen) return null;
 
   return (
@@ -234,12 +254,17 @@ function CreateChat() {
                 placeholder="Введите название"
                 value={chatName}
                 onChange={(e) => setChatName(e.target.value)}
+                required
               />
             </div>
           )}
 
           <div className={style.inputGroup}>
-            <label className={style.label}>Добавить участников</label>
+            <label className={style.label}>
+              {chatType === "private"
+                ? "Выберите пользователя"
+                : "Добавить участников"}
+            </label>
             <div className={style.searchContainer}>
               <input
                 type="text"
@@ -260,17 +285,16 @@ function CreateChat() {
                     onClick={() => handleAddUser(user)}
                   >
                     <div className={style.userAvatar}>
-                      {typeof user.avatar_path === "string" &&
-                      user.avatar_path ? (
-                        <img src={user.avatar_path} alt={user.name} />
+                      {user.avatar_url ? (
+                        <img src={user.avatar_url} alt={user.username} />
                       ) : (
                         <div className={style.avatarPlaceholder}>
-                          {user.name.charAt(0).toUpperCase()}
+                          {user.username.charAt(0).toUpperCase()}
                         </div>
                       )}
                     </div>
                     <div className={style.userInfo}>
-                      <div className={style.userName}>{user.name}</div>
+                      <div className={style.userName}>{user.username}</div>
                       <div className={style.userEmail}>{user.email}</div>
                     </div>
                     <button type="button" className={style.addBtn}>
@@ -290,7 +314,7 @@ function CreateChat() {
               <div className={style.selectedList}>
                 {selectedUsers.map((user) => (
                   <div key={user.id} className={style.selectedItem}>
-                    <span>{user.name}</span>
+                    <span>{user.username}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveUser(user.id)}
@@ -302,17 +326,6 @@ function CreateChat() {
               </div>
             </div>
           )}
-
-          <div className={style.inputGroup}>
-            <label className={style.label}>Описание</label>
-            <textarea
-              className={style.textarea}
-              placeholder="Введите описание чата..."
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
 
           <div className={style.actions}>
             <button

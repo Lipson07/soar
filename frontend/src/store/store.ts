@@ -4,6 +4,7 @@ import storage from "./storage";
 import user from "./userSlice";
 import modal from "./modalChatSlice";
 import search from "./searchSlice";
+import selectedChat from "./selectedChatSlice";
 
 const persistUserConfig = {
   key: "user",
@@ -11,13 +12,24 @@ const persistUserConfig = {
   whitelist: ["user", "isAuthenticated"],
 };
 
+const persistSelectedChatConfig = {
+  key: "selectedChat",
+  storage,
+  whitelist: ["currentChat", "isOpen"],
+};
+
 const persistedUserReducer = persistReducer(persistUserConfig, user);
+const persistedSelectedChatReducer = persistReducer(
+  persistSelectedChatConfig,
+  selectedChat,
+);
 
 export const store = configureStore({
   reducer: {
     user: persistedUserReducer,
     modal: modal,
     search: search,
+    selectedChat: persistedSelectedChatReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
