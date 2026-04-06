@@ -1,3 +1,4 @@
+// userSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 interface User {
@@ -21,13 +22,35 @@ interface UserState {
   token: string | null;
 }
 
-const initialState: UserState = {
-  user: null,
-  isAuthenticated: false,
-  loading: false,
-  error: null,
-  token: null,
+const loadInitialState = (): UserState => {
+  try {
+    const token = localStorage.getItem("token");
+    const userStr = localStorage.getItem("user");
+
+    if (token && userStr) {
+      const user = JSON.parse(userStr);
+      return {
+        user,
+        token,
+        isAuthenticated: true,
+        loading: false,
+        error: null,
+      };
+    }
+  } catch (error) {
+    console.error("Error loading auth state:", error);
+  }
+
+  return {
+    user: null,
+    isAuthenticated: false,
+    loading: false,
+    error: null,
+    token: null,
+  };
 };
+
+const initialState: UserState = loadInitialState();
 
 const userSlice = createSlice({
   name: "user",
@@ -38,6 +61,10 @@ const userSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.error = null;
+
+      // Сохраняем в localStorage
+      localStorage.setItem("token", action.payload.token);
+      localStorage.setItem("user", JSON.stringify(action.payload.user));
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
@@ -58,6 +85,7 @@ const userSlice = createSlice({
     updateUser: (state, action: PayloadAction<Partial<User>>) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
+        localStorage.setItem("user", JSON.stringify(state.user));
       }
     },
   },

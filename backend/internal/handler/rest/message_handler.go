@@ -31,7 +31,9 @@ func NewMessageHandler(messageService service.MessageService) *MessageHandler {
 // @Param request body domain.SendMessageRequest true "Текст сообщения"
 // @Success 201 {object} domain.Message
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
 // @Router /api/messages [post]
 func (h *MessageHandler) SendMessage(c *gin.Context) {
 	chatIDStr := c.Query("chat_id")
@@ -47,8 +49,30 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
-	message, err := h.messageService.SendMessage(c.Request.Context(), chatID, &req, userID.(uuid.UUID))
+	// Исправляем проблему с конвертацией userID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
+		return
+	}
+
+	// Конвертируем userID из string в uuid.UUID
+	var userID uuid.UUID
+	switch v := userIDInterface.(type) {
+	case string:
+		userID, err = uuid.Parse(v)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "некорректный формат ID пользователя"})
+			return
+		}
+	case uuid.UUID:
+		userID = v
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неподдерживаемый тип ID пользователя"})
+		return
+	}
+
+	message, err := h.messageService.SendMessage(c.Request.Context(), chatID, &req, userID)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
@@ -69,6 +93,7 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 // @Param offset query int false "Смещение (default 0)"
 // @Success 200 {array} domain.Message
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
 // @Router /api/messages [get]
 func (h *MessageHandler) GetMessages(c *gin.Context) {
@@ -82,8 +107,29 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
-	userID, _ := c.Get("user_id")
-	messages, err := h.messageService.GetMessages(c.Request.Context(), chatID, userID.(uuid.UUID), limit, offset)
+	// Исправляем проблему с конвертацией userID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
+		return
+	}
+
+	var userID uuid.UUID
+	switch v := userIDInterface.(type) {
+	case string:
+		userID, err = uuid.Parse(v)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "некорректный формат ID пользователя"})
+			return
+		}
+	case uuid.UUID:
+		userID = v
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неподдерживаемый тип ID пользователя"})
+		return
+	}
+
+	messages, err := h.messageService.GetMessages(c.Request.Context(), chatID, userID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
@@ -103,6 +149,7 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 // @Param request body object true "Новый текст"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
 // @Router /api/messages [put]
 func (h *MessageHandler) EditMessage(c *gin.Context) {
@@ -114,15 +161,36 @@ func (h *MessageHandler) EditMessage(c *gin.Context) {
 	}
 
 	var req struct {
-		Text string `json:"text"`
+		Text string `json:"text" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	userID, _ := c.Get("user_id")
-	err = h.messageService.EditMessage(c.Request.Context(), messageID, req.Text, userID.(uuid.UUID))
+	// Исправляем проблему с конвертацией userID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
+		return
+	}
+
+	var userID uuid.UUID
+	switch v := userIDInterface.(type) {
+	case string:
+		userID, err = uuid.Parse(v)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "некорректный формат ID пользователя"})
+			return
+		}
+	case uuid.UUID:
+		userID = v
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неподдерживаемый тип ID пользователя"})
+		return
+	}
+
+	err = h.messageService.EditMessage(c.Request.Context(), messageID, req.Text, userID)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return
@@ -141,6 +209,7 @@ func (h *MessageHandler) EditMessage(c *gin.Context) {
 // @Param message_id query string true "ID сообщения"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{}
 // @Router /api/messages [delete]
 func (h *MessageHandler) DeleteMessage(c *gin.Context) {
@@ -151,8 +220,29 @@ func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
-	err = h.messageService.DeleteMessage(c.Request.Context(), messageID, userID.(uuid.UUID))
+	// Исправляем проблему с конвертацией userID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
+		return
+	}
+
+	var userID uuid.UUID
+	switch v := userIDInterface.(type) {
+	case string:
+		userID, err = uuid.Parse(v)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "некорректный формат ID пользователя"})
+			return
+		}
+	case uuid.UUID:
+		userID = v
+	default:
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "неподдерживаемый тип ID пользователя"})
+		return
+	}
+
+	err = h.messageService.DeleteMessage(c.Request.Context(), messageID, userID)
 	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 		return

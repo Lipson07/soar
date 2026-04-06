@@ -28,6 +28,8 @@ interface Chat {
     user_id: string;
     created_at: string;
   } | null;
+  other_user_id?: string | null;
+  other_user_name?: string | null;
 }
 
 interface SelectedChatState {

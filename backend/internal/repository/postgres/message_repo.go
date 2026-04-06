@@ -19,7 +19,7 @@ func NewMessageRepository(db *sqlx.DB) *MessageRepository {
 
 func (r *MessageRepository) Create(ctx context.Context, message *domain.Message) error {
 	query := `
-		INSERT INTO messages (id, chat_id, sender_id, text, reply_to, is_edited, created_at, updated_at)
+		INSERT INTO messages (id, chat_id, user_id, text, reply_to, is_edited, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	_, err := r.db.ExecContext(ctx, query,
@@ -31,7 +31,7 @@ func (r *MessageRepository) Create(ctx context.Context, message *domain.Message)
 }
 
 func (r *MessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Message, error) {
-	query := `SELECT id, chat_id, sender_id, text, reply_to, is_edited, created_at, updated_at, deleted_at 
+	query := `SELECT id, chat_id, user_id, text, reply_to, is_edited, created_at, updated_at, deleted_at 
 		FROM messages WHERE id = $1 AND deleted_at IS NULL`
 	var message domain.Message
 	err := r.db.GetContext(ctx, &message, query, id)
@@ -43,7 +43,7 @@ func (r *MessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 
 func (r *MessageRepository) GetByChatID(ctx context.Context, chatID uuid.UUID, limit, offset int) ([]*domain.Message, error) {
 	query := `
-		SELECT id, chat_id, sender_id, text, reply_to, is_edited, created_at, updated_at, deleted_at
+		SELECT id, chat_id, user_id, text, reply_to, is_edited, created_at, updated_at, deleted_at
 		FROM messages
 		WHERE chat_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -71,7 +71,7 @@ func (r *MessageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *MessageRepository) GetLastMessage(ctx context.Context, chatID uuid.UUID) (*domain.MessageInfo, error) {
 	query := `
-		SELECT id, text, sender_id, created_at
+		SELECT id, text, user_id, created_at
 		FROM messages
 		WHERE chat_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC

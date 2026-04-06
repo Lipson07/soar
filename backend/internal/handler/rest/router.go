@@ -3,15 +3,16 @@ package rest
 import (
 	"github.com/gin-gonic/gin"
 )
+
 type RouteRegistrar interface {
 	RegisterRoutes(public, protected *gin.RouterGroup)
 }
+
 func SetupRouter(registrars ...RouteRegistrar) *gin.Engine {
 	router := gin.Default()
-
+	router.Use(CORSMiddleware())
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
-	router.Use(CORSMiddleware())
 
 	public := router.Group("/api")
 	protected := router.Group("/api")
@@ -72,9 +73,9 @@ func (h *ParticipantHandler) RegisterRoutes(public, protected *gin.RouterGroup) 
 func (h *MessageHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	messages := protected.Group("/messages")
 	{
-		messages.POST("/", h.SendMessage)
-		messages.GET("/", h.GetMessages)
-		messages.PUT("/", h.EditMessage)
-		messages.DELETE("/", h.DeleteMessage)
+		messages.POST("", h.SendMessage)
+		messages.GET("", h.GetMessages)
+		messages.PUT("", h.EditMessage)
+		messages.DELETE("", h.DeleteMessage)
 	}
 }
