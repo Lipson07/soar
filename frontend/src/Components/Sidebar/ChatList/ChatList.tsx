@@ -45,6 +45,8 @@ interface Chat {
     created_at: string;
   } | null;
   unread_count?: number;
+  other_user_id?: string | null;
+  other_user_name?: string | null;
 }
 
 function ChatList() {
@@ -68,11 +70,11 @@ function ChatList() {
     if (userStr) {
       const user = JSON.parse(userStr);
       setCurrentUserId(user.id);
+      fetchMyChats(user.id);
     }
-    fetchMyChats();
   }, []);
 
-  const fetchMyChats = async () => {
+  const fetchMyChats = async (userId: string) => {
     try {
       const token = localStorage.getItem("token");
 
@@ -94,7 +96,11 @@ function ChatList() {
         const data = await response.json();
         const chats: Chat[] = Array.isArray(data) ? data : [];
 
-        const enrichedChats = await enrichPrivateChatNames(chats, token);
+        const enrichedChats = await enrichPrivateChatNames(
+          chats,
+          token,
+          userId,
+        );
         setMyChats(enrichedChats);
       } else {
         console.error("Ошибка при получении чатов:", response.status);
@@ -106,57 +112,124 @@ function ChatList() {
     }
   };
 
-  const enrichPrivateChatNames = async (chats: Chat[], token: string) => {
+  const enrichPrivateChatNames = async (
+    chats: Chat[],
+    token: string,
+    userId: string,
+  ) => {
     const enriched = [...chats];
+
+    console.log("=== Начало обогащения чатов ===");
+    console.log("Current user ID:", userId);
+    console.log("Всего чатов:", chats.length);
 
     for (let i = 0; i < enriched.length; i++) {
       const chat = enriched[i];
+      console.log(`\n--- Обработка чата ${i + 1}/${enriched.length} ---`);
+      console.log("Chat ID:", chat.id);
+      console.log("Chat type:", chat.type);
+      console.log("Chat name до обогащения:", chat.name);
 
-      if (chat.type === "private" && (!chat.name || chat.name === "")) {
+      if (chat.type === "private") {
         try {
+          console.log("Запрашиваем участников чата...");
+
           const participantsResponse = await fetch(
             `http://localhost:8080/api/participants?chat_id=${chat.id}`,
             {
+              method: "GET",
               headers: {
                 Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
               },
             },
           );
 
+          console.log(
+            "Статус ответа participants:",
+            participantsResponse.status,
+          );
+
           if (participantsResponse.ok) {
             const participants = await participantsResponse.json();
+            console.log("Участники чата (participants):", participants);
+
             const otherParticipant = participants.find(
-              (p: any) => p.user_id !== currentUserId,
+              (p: any) => p.user_id !== userId,
             );
 
+            console.log("Другой участник (participant):", otherParticipant);
+
             if (otherParticipant) {
-              let user = usersCache.get(otherParticipant.user_id);
+              const otherUserId = otherParticipant.user_id;
+              let user = usersCache.get(otherUserId);
+              console.log("Пользователь в кеше:", user);
 
               if (!user) {
+                console.log(
+                  "Запрашиваем данные пользователя с ID:",
+                  otherUserId,
+                );
                 const userResponse = await fetch(
-                  `http://localhost:8080/api/users/${otherParticipant.user_id}`,
+                  `http://localhost:8080/api/users/${otherUserId}`,
                   {
+                    method: "GET",
                     headers: {
                       Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
                     },
                   },
                 );
+
+                console.log("Статус ответа users:", userResponse.status);
+
                 if (userResponse.ok) {
                   user = await userResponse.json();
+                  console.log("Получены данные пользователя:", user);
                   setUsersCache((prev) => new Map(prev).set(user.id, user));
+                } else {
+                  console.error(
+                    "Ошибка получения пользователя, статус:",
+                    userResponse.status,
+                  );
                 }
               }
 
               if (user) {
+                console.log("Устанавливаем имя чата как:", user.username);
                 enriched[i].name = user.username;
+                enriched[i].other_user_id = user.id;
+                enriched[i].other_user_name = user.username;
+              } else {
+                console.error("Не удалось получить данные пользователя");
               }
+            } else {
+              console.warn("Не найден другой участник!");
+              console.log("Current user ID для поиска:", userId);
+              console.log("Все участники:", participants);
             }
+          } else {
+            console.error(
+              "Ошибка получения участников, статус:",
+              participantsResponse.status,
+            );
           }
         } catch (error) {
           console.error("Ошибка получения имени для чата:", chat.id, error);
         }
+      } else {
+        console.log("Пропускаем чат (не private)");
       }
+
+      console.log("Chat name после обогащения:", enriched[i].name);
     }
+
+    console.log("\n=== Финальный список чатов ===");
+    enriched.forEach((chat, index) => {
+      console.log(
+        `${index + 1}. Chat ID: ${chat.id}, Name: ${chat.name}, Type: ${chat.type}`,
+      );
+    });
 
     return enriched;
   };
@@ -199,6 +272,7 @@ function ChatList() {
   };
 
   const getChatName = (chat: Chat) => {
+    console.log("getChatName для чата:", chat.id, chat.name, chat.type);
     if (chat.type === "private") {
       return chat.name || "Приватный чат";
     }
@@ -393,35 +467,40 @@ function ChatList() {
                 </button>
               </div>
             ) : (
-              myChats.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`${style.chatItem} ${
-                    isChatActive(chat.id) ? style.active : ""
-                  }`}
-                  onClick={() => handleChatClick(chat)}
-                >
-                  <div className={style.avatar}>{renderChatAvatar(chat)}</div>
-                  <div className={style.chatInfo}>
-                    <div className={style.chatHeader}>
-                      <div className={style.chatName}>{getChatName(chat)}</div>
-                      <div className={style.timestamp}>
-                        {formatDate(chat.last_message_at || chat.updated_at)}
-                      </div>
-                    </div>
-                    <div className={style.messagePreview}>
-                      <div className={style.lastMessage}>
-                        {getLastMessageText(chat)}
-                      </div>
-                      {chat.unread_count && chat.unread_count > 0 && (
-                        <div className={style.unreadBadge}>
-                          {chat.unread_count}
+              myChats.map((chat) => {
+                console.log("Рендер чата:", chat.id, "name:", chat.name);
+                return (
+                  <div
+                    key={chat.id}
+                    className={`${style.chatItem} ${
+                      isChatActive(chat.id) ? style.active : ""
+                    }`}
+                    onClick={() => handleChatClick(chat)}
+                  >
+                    <div className={style.avatar}>{renderChatAvatar(chat)}</div>
+                    <div className={style.chatInfo}>
+                      <div className={style.chatHeader}>
+                        <div className={style.chatName}>
+                          {getChatName(chat)}
                         </div>
-                      )}
+                        <div className={style.timestamp}>
+                          {formatDate(chat.last_message_at || chat.updated_at)}
+                        </div>
+                      </div>
+                      <div className={style.messagePreview}>
+                        <div className={style.lastMessage}>
+                          {getLastMessageText(chat)}
+                        </div>
+                        {chat.unread_count && chat.unread_count > 0 && (
+                          <div className={style.unreadBadge}>
+                            {chat.unread_count}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </>
         )}

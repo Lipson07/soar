@@ -30,7 +30,6 @@ function MessageList() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-  // Добавляем ref для предотвращения множественных запросов
   const isFetchingRef = useRef(false);
 
   const getToken = useCallback(() => {
@@ -38,7 +37,6 @@ function MessageList() {
   }, [token]);
 
   const fetchMessages = useCallback(async () => {
-    // Предотвращаем одновременные запросы
     if (!currentChat || isFetchingRef.current) return;
 
     isFetchingRef.current = true;
@@ -82,7 +80,6 @@ function MessageList() {
         dispatch(setMessages(sortedMessages));
       } else if (response.status === 401) {
         console.error("Unauthorized - please login again");
-        // Опционально: перенаправить на страницу логина
       } else {
         console.error("Failed to fetch messages:", response.status);
       }
@@ -95,19 +92,16 @@ function MessageList() {
     }
   }, [currentChat, getToken, dispatch]);
 
-  // Загружаем сообщения при изменении чата
   useEffect(() => {
     if (currentChat) {
       fetchMessages();
     }
 
-    // Очищаем сообщения при смене чата
     return () => {
       dispatch(setMessages([]));
     };
-  }, [currentChat?.id, fetchMessages, dispatch]); // Добавили все зависимости
+  }, [currentChat?.id, fetchMessages, dispatch]);
 
-  // Интервал для обновления сообщений
   useEffect(() => {
     if (!currentChat) return;
 
@@ -116,7 +110,7 @@ function MessageList() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [currentChat?.id, fetchMessages]); // Добавили fetchMessages в зависимости
+  }, [currentChat?.id, fetchMessages]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

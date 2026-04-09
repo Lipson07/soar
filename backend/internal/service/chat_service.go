@@ -45,23 +45,16 @@ func (s *chatService) CreatePrivateChat(ctx context.Context, creatorID, userID u
 		return nil, domain.ErrUserNotFound
 	}
 
-	// Получаем данные пользователя для имени чата
-	otherUser, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil || otherUser == nil {
-		return nil, domain.ErrUserNotFound
-	}
-
 	// Проверяем, существует ли уже чат
 	existingChat, err := s.chatRepo.GetPrivateChatByUsers(ctx, creatorID, userID)
 	if err == nil && existingChat != nil {
 		return existingChat, nil
 	}
 
-	// Создаем чат с именем = имя собеседника
-	chatName := otherUser.Username
+	// Создаем чат БЕЗ имени (nil) - фронтенд сам определит имя
 	chat := &domain.Chat{
 		ID:        uuid.New(),
-		Name:      &chatName,
+		Name:      nil,
 		Type:      domain.ChatTypePrivate,
 		CreatorID: creatorID,
 		CreatedAt: time.Now(),

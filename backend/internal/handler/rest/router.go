@@ -10,6 +10,7 @@ type RouteRegistrar interface {
 
 func SetupRouter(registrars ...RouteRegistrar) *gin.Engine {
 	router := gin.Default()
+
 	router.Use(CORSMiddleware())
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
@@ -60,10 +61,10 @@ func (h *ChatHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 func (h *ParticipantHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	participants := protected.Group("/participants")
 	{
-		participants.POST("/", h.AddParticipants)
-		participants.DELETE("/", h.RemoveParticipant)
+		participants.POST("", h.AddParticipants)
+		participants.DELETE("", h.RemoveParticipant)
 		participants.POST("/leave", h.LeaveChat)
-		participants.GET("/", h.GetChatParticipants)
+		participants.GET("", h.GetChatParticipants)
 		participants.PUT("/role", h.UpdateRole)
 		participants.PUT("/read", h.UpdateLastRead)
 		participants.GET("/unread", h.GetUnreadCount)

@@ -1,7 +1,11 @@
 import React from "react";
 import style from "./SidebarHeader.module.scss";
 
-function SidebarHeader() {
+interface SidebarHeaderProps {
+  onProfileClick: () => void;
+}
+
+function SidebarHeader({ onProfileClick }: SidebarHeaderProps) {
   return (
     <div className={style.sidebarHeader}>
       <div className={style.logo}>
@@ -38,7 +42,11 @@ function SidebarHeader() {
       </div>
 
       <div className={style.iconFunction}>
-        <button className={style.iconButton} title="Профиль">
+        <button
+          className={style.iconButton}
+          title="Профиль"
+          onClick={onProfileClick}
+        >
           <svg
             width="24"
             height="24"
