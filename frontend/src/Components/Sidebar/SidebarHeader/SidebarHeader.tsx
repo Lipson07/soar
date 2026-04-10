@@ -3,9 +3,17 @@ import style from "./SidebarHeader.module.scss";
 
 interface SidebarHeaderProps {
   onProfileClick: () => void;
+  onSecurityClick: () => void;
+  onFilesClick: () => void;
+  onSettingsClick: () => void;
 }
 
-function SidebarHeader({ onProfileClick }: SidebarHeaderProps) {
+function SidebarHeader({
+  onProfileClick,
+  onSecurityClick,
+  onFilesClick,
+  onSettingsClick,
+}: SidebarHeaderProps) {
   return (
     <div className={style.sidebarHeader}>
       <div className={style.logo}>
@@ -61,7 +69,11 @@ function SidebarHeader({ onProfileClick }: SidebarHeaderProps) {
           </svg>
         </button>
 
-        <button className={style.iconButton} title="Защита">
+        <button
+          className={style.iconButton}
+          title="Защита"
+          onClick={onSecurityClick}
+        >
           <svg
             width="24"
             height="24"
@@ -80,7 +92,11 @@ function SidebarHeader({ onProfileClick }: SidebarHeaderProps) {
           </svg>
         </button>
 
-        <button className={style.iconButton} title="Файлы">
+        <button
+          className={style.iconButton}
+          title="Файлы"
+          onClick={onFilesClick}
+        >
           <svg
             width="24"
             height="24"
@@ -99,7 +115,11 @@ function SidebarHeader({ onProfileClick }: SidebarHeaderProps) {
           </svg>
         </button>
 
-        <button className={style.iconButton} title="Настройки">
+        <button
+          className={style.iconButton}
+          title="Настройки"
+          onClick={onSettingsClick}
+        >
           <svg
             width="24"
             height="24"
