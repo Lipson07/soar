@@ -66,28 +66,21 @@ const Login = () => {
       });
 
       const data = await response.json();
-      console.log("Ответ от сервера:", data);
 
       if (!response.ok) {
         dispatch(setError(data.message || data.error || "Ошибка входа"));
         return;
       }
 
-      // Получаем токен из ответа
       const token = data.token;
-      console.log("Получен токен:", token);
 
       if (!token) {
-        console.error("Токен не получен от сервера!");
         dispatch(setError("Ошибка авторизации: токен не получен"));
         return;
       }
 
-      // Получаем данные пользователя
       const userData = data.user || data;
-      console.log("Данные пользователя:", userData);
 
-      // Адаптируем данные из Go бэкенда
       const adaptedUser = {
         id: userData.id,
         username: userData.username,
@@ -100,21 +93,11 @@ const Login = () => {
         role: userData.role || "user",
       };
 
-      // Сохраняем токен в localStorage (СРАЗУ ПОСЛЕ ПОЛУЧЕНИЯ)
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(adaptedUser));
 
-      // Проверяем, что токен сохранился
-      const savedToken = localStorage.getItem("token");
-      console.log("Токен сохранен в localStorage:", savedToken);
-      console.log("Сохраненный пользователь:", localStorage.getItem("user"));
-
-      // Сохраняем в Redux
       dispatch(setUser({ user: adaptedUser, token: token }));
 
-      console.log("Вход успешен!");
-
-      // Небольшая задержка перед переходом, чтобы убедиться, что все сохранилось
       setTimeout(() => {
         navigate("/main");
       }, 100);
@@ -126,6 +109,58 @@ const Login = () => {
 
   return (
     <main className={style.main}>
+      <div className={style.backgroundObjects}>
+        <div className={`${style.cloud} ${style.cloud1}`} />
+        <div className={`${style.cloud} ${style.cloud2}`} />
+        <div className={`${style.cloud} ${style.cloud3}`} />
+
+        <div className={`${style.feather} ${style.feather1}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C8 4 4 8 3 12c-1 6 3 10 7 8 2-1 3-4 2-7-1-2-3-3-5-2-1 1-1 3 0 4 1 1 2 0 2-1 0-1-1-1-1-1 0 0 2-1 3 1 1 2 1 5-1 7-3 2-7 0-6-5 1-4 5-8 9-10l-1-4z" />
+          </svg>
+        </div>
+        <div className={`${style.feather} ${style.feather2}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C8 4 4 8 3 12c-1 6 3 10 7 8 2-1 3-4 2-7-1-2-3-3-5-2-1 1-1 3 0 4 1 1 2 0 2-1 0-1-1-1-1-1 0 0 2-1 3 1 1 2 1 5-1 7-3 2-7 0-6-5 1-4 5-8 9-10l-1-4z" />
+          </svg>
+        </div>
+        <div className={`${style.feather} ${style.feather3}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C8 4 4 8 3 12c-1 6 3 10 7 8 2-1 3-4 2-7-1-2-3-3-5-2-1 1-1 3 0 4 1 1 2 0 2-1 0-1-1-1-1-1 0 0 2-1 3 1 1 2 1 5-1 7-3 2-7 0-6-5 1-4 5-8 9-10l-1-4z" />
+          </svg>
+        </div>
+        <div className={`${style.feather} ${style.feather4}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M12 2C8 4 4 8 3 12c-1 6 3 10 7 8 2-1 3-4 2-7-1-2-3-3-5-2-1 1-1 3 0 4 1 1 2 0 2-1 0-1-1-1-1-1 0 0 2-1 3 1 1 2 1 5-1 7-3 2-7 0-6-5 1-4 5-8 9-10l-1-4z" />
+          </svg>
+        </div>
+
+        <div className={`${style.smallBird} ${style.smallBird1}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M21 12c0 3-2 5-4 6-3 2-8 1-10-3-2-4 0-9 4-11 3-1 6 0 8 3 1 1 2 3 2 5z" />
+          </svg>
+        </div>
+        <div className={`${style.smallBird} ${style.smallBird2}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M21 12c0 3-2 5-4 6-3 2-8 1-10-3-2-4 0-9 4-11 3-1 6 0 8 3 1 1 2 3 2 5z" />
+          </svg>
+        </div>
+        <div className={`${style.smallBird} ${style.smallBird3}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M21 12c0 3-2 5-4 6-3 2-8 1-10-3-2-4 0-9 4-11 3-1 6 0 8 3 1 1 2 3 2 5z" />
+          </svg>
+        </div>
+        <div className={`${style.smallBird} ${style.smallBird4}`}>
+          <svg viewBox="0 0 24 24" fill="white">
+            <path d="M21 12c0 3-2 5-4 6-3 2-8 1-10-3-2-4 0-9 4-11 3-1 6 0 8 3 1 1 2 3 2 5z" />
+          </svg>
+        </div>
+
+        <div className={`${style.wind} ${style.wind1}`} />
+        <div className={`${style.wind} ${style.wind2}`} />
+        <div className={`${style.wind} ${style.wind3}`} />
+      </div>
+
       <div className={style.birds} ref={birdRef}>
         <svg
           version="1.0"
@@ -224,17 +259,14 @@ const Login = () => {
         />
 
         <div className={style.buttondiv}>
-          <button type="button" className={style.qr}>
-            QR
-          </button>
-          <button type="submit" className={style.vhod} disabled={loading}>
+          <button type="submit" disabled={loading}>
             {loading ? "Вход..." : "Войти"}
           </button>
         </div>
 
         <div className={style.txt}>
           <p>
-            Нет аккаунта?
+            Нет аккаунта?{" "}
             <Link to="/register">
               <span>Зарегистрироваться</span>
             </Link>

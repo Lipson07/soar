@@ -2,14 +2,145 @@
   width: 30%;
   height: 100%;
   background: rgba(41, 41, 41, 0.95);
-  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: row;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.3s ease;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  overflow: hidden;
 
-  &:hover {
-    border-right-color: rgba(255, 255, 255, 0.15);
+  .backgroundObjects {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+
+    .cloud {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 60px;
+
+      &::before,
+      &::after {
+        content: "";
+        position: absolute;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 50%;
+      }
+    }
+
+    .cloud1 {
+      width: 100px;
+      height: 35px;
+      top: 15%;
+      left: 5%;
+
+      &::before {
+        width: 40px;
+        height: 40px;
+        top: -20px;
+        left: 8px;
+      }
+
+      &::after {
+        width: 50px;
+        height: 50px;
+        top: -30px;
+        left: 35px;
+      }
+    }
+
+    .cloud2 {
+      width: 120px;
+      height: 40px;
+      bottom: 25%;
+      right: 3%;
+
+      &::before {
+        width: 45px;
+        height: 45px;
+        top: -22px;
+        left: 12px;
+      }
+
+      &::after {
+        width: 55px;
+        height: 55px;
+        top: -32px;
+        left: 45px;
+      }
+    }
+
+    .feather {
+      position: absolute;
+      opacity: 0.03;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .feather1 {
+      width: 30px;
+      height: 30px;
+      top: 60%;
+      left: 10%;
+      transform: rotate(25deg);
+      animation: floatFeather 8s ease-in-out infinite;
+    }
+
+    .feather2 {
+      width: 25px;
+      height: 25px;
+      bottom: 15%;
+      right: 15%;
+      transform: rotate(-35deg);
+      animation: floatFeather 10s ease-in-out infinite 2s;
+    }
+
+    .smallBird {
+      position: absolute;
+      opacity: 0.04;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .smallBird1 {
+      width: 20px;
+      height: 20px;
+      top: 40%;
+      right: 8%;
+      animation: flyBirdVertical 12s ease-in-out infinite;
+    }
+
+    .smallBird2 {
+      width: 25px;
+      height: 25px;
+      bottom: 35%;
+      left: 5%;
+      animation: flyBirdVertical 14s ease-in-out infinite 3s;
+    }
+
+    .wind {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.015),
+        transparent
+      );
+      animation: windBlow 8s ease-in-out infinite;
+    }
   }
 
   .container {
@@ -18,24 +149,49 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    scrollbar-width: thin;
+    position: relative;
+    z-index: 1;
 
     &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
+      width: 3px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 4px;
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.3);
-      }
+      background: #4a4a4a;
+      border-radius: 0;
     }
+  }
+}
+
+@keyframes floatFeather {
+  0%,
+  100% {
+    transform: translateY(0) rotate(25deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(35deg);
+  }
+}
+
+@keyframes flyBirdVertical {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes windBlow {
+  0%,
+  100% {
+    opacity: 0.05;
+    transform: translateX(-3%);
+  }
+  50% {
+    opacity: 0.15;
+    transform: translateX(3%);
   }
 }
 

@@ -1,16 +1,15 @@
 .messageBar {
   display: flex;
   align-items: flex-end;
-  gap: 12px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 14px 20px;
   background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .attachments {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .attachButton {
@@ -18,73 +17,62 @@
   border: none;
   cursor: pointer;
   padding: 8px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-  color: #9ca3af;
+  border-radius: 6px;
+  transition: color 0.15s ease;
+  color: #8a8a8a;
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
-    transform: scale(1.05);
-  }
-
-  &:active {
-    transform: scale(0.95);
+    color: #e0e0e0;
   }
 }
 
 .messageInput {
   flex: 1;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  padding: 10px 16px;
-  color: #e5e7eb;
+  background: #2a2a2a;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #e0e0e0;
   font-size: 14px;
   font-family: inherit;
+  font-weight: 400;
   resize: none;
   max-height: 100px;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
 
   &::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: #6a6a6a;
   }
 
   &:focus {
     outline: none;
-    border-color: #6b7280;
-    background: rgba(255, 255, 255, 0.12);
+    background: #323232;
   }
 }
 
 .sendButton {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #3a3a3a;
+  border: none;
   cursor: pointer;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  color: #9ca3af;
+  transition: background 0.15s ease;
+  color: #a0a0a0;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.15);
-    color: #e5e7eb;
-    transform: scale(1.05);
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.95);
+    background: #4a4a4a;
+    color: #e0e0e0;
   }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 }

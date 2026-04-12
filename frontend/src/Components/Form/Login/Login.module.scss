@@ -9,6 +9,208 @@
   justify-content: end;
   align-items: center;
 
+  .backgroundObjects {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+
+    .cloud {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 60px;
+
+      &::before,
+      &::after {
+        content: "";
+        position: absolute;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 50%;
+      }
+    }
+
+    .cloud1 {
+      width: 120px;
+      height: 40px;
+      top: 15%;
+      left: 5%;
+
+      &::before {
+        width: 50px;
+        height: 50px;
+        top: -25px;
+        left: 10px;
+      }
+
+      &::after {
+        width: 60px;
+        height: 60px;
+        top: -35px;
+        left: 40px;
+      }
+    }
+
+    .cloud2 {
+      width: 160px;
+      height: 50px;
+      top: 40%;
+      right: 3%;
+
+      &::before {
+        width: 60px;
+        height: 60px;
+        top: -30px;
+        left: 15px;
+      }
+
+      &::after {
+        width: 70px;
+        height: 70px;
+        top: -40px;
+        left: 60px;
+      }
+    }
+
+    .cloud3 {
+      width: 100px;
+      height: 35px;
+      bottom: 20%;
+      left: 8%;
+
+      &::before {
+        width: 40px;
+        height: 40px;
+        top: -20px;
+        left: 8px;
+      }
+
+      &::after {
+        width: 50px;
+        height: 50px;
+        top: -30px;
+        left: 35px;
+      }
+    }
+
+    .feather {
+      position: absolute;
+      opacity: 0.04;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .feather1 {
+      width: 40px;
+      height: 40px;
+      top: 25%;
+      right: 15%;
+      transform: rotate(45deg);
+      animation: floatFeather 8s ease-in-out infinite;
+    }
+
+    .feather2 {
+      width: 30px;
+      height: 30px;
+      bottom: 30%;
+      right: 25%;
+      transform: rotate(-30deg);
+      animation: floatFeather 10s ease-in-out infinite 1s;
+    }
+
+    .feather3 {
+      width: 35px;
+      height: 35px;
+      top: 60%;
+      left: 12%;
+      transform: rotate(15deg);
+      animation: floatFeather 9s ease-in-out infinite 2s;
+    }
+
+    .feather4 {
+      width: 25px;
+      height: 25px;
+      top: 10%;
+      right: 30%;
+      transform: rotate(-60deg);
+      animation: floatFeather 7s ease-in-out infinite 0.5s;
+    }
+
+    .smallBird {
+      position: absolute;
+      opacity: 0.05;
+
+      svg {
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    .smallBird1 {
+      width: 30px;
+      height: 30px;
+      top: 20%;
+      left: 20%;
+      animation: flyBird 15s linear infinite;
+    }
+
+    .smallBird2 {
+      width: 25px;
+      height: 25px;
+      top: 50%;
+      right: 10%;
+      animation: flyBird 18s linear infinite 3s;
+    }
+
+    .smallBird3 {
+      width: 20px;
+      height: 20px;
+      bottom: 25%;
+      left: 30%;
+      animation: flyBird 12s linear infinite 6s;
+    }
+
+    .smallBird4 {
+      width: 35px;
+      height: 35px;
+      top: 70%;
+      right: 20%;
+      animation: flyBird 20s linear infinite 9s;
+    }
+
+    .wind {
+      position: absolute;
+      top: 30%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.02),
+        transparent
+      );
+      animation: windBlow 6s ease-in-out infinite;
+    }
+
+    .wind2 {
+      top: 55%;
+      animation: windBlow 8s ease-in-out infinite 2s;
+      opacity: 0.5;
+    }
+
+    .wind3 {
+      top: 75%;
+      animation: windBlow 7s ease-in-out infinite 4s;
+      opacity: 0.3;
+    }
+  }
+
   .birds {
     width: 400px;
     display: flex;
@@ -30,7 +232,7 @@
   }
 
   .container {
-    width: 400px;
+    width: 420px;
     background: #2b2b2b;
     border-radius: 20px;
     display: flex;
@@ -41,49 +243,16 @@
     align-items: center;
     color: white;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
     z-index: 1;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
     padding: 30px 0;
 
-    .inputdiv {
-      width: 300px;
-      display: flex;
-      gap: 8px;
-      flex-direction: column;
-      animation: slideIn 0.5s ease-out;
-
-      label {
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.7);
-      }
-
-      input {
-        width: 100%;
-        height: 20px;
-        border-radius: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        outline: none;
-        padding: 10px;
-        background-color: #333333;
-        color: white;
-        font-size: 14px;
-        transition: all 0.3s ease;
-
-        &:focus {
-          border-color: #4a90e2;
-          transform: translateY(-2px);
-          box-shadow: 0 0 10px rgba(74, 144, 226, 0.3);
-        }
-
-        &:hover {
-          border-color: rgba(74, 144, 226, 0.5);
-        }
-
-        &::placeholder {
-          color: rgba(255, 255, 255, 0.4);
-        }
-      }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+      color: white;
+      animation: fadeInUp 0.5s ease-out;
     }
 
     .buttondiv {
@@ -102,6 +271,8 @@
         background-color: #333333;
         cursor: pointer;
         transition: all 0.3s ease;
+        width: 320px;
+        height: 50px;
 
         &:hover {
           transform: translateY(-2px);
@@ -110,24 +281,6 @@
 
         &:active {
           transform: translateY(0);
-        }
-      }
-
-      .qr {
-        width: 60px;
-        height: 60px;
-
-        &:hover {
-          background-color: #404040;
-        }
-      }
-
-      .vhod {
-        width: 170px;
-        height: 60px;
-
-        &:hover {
-          background-color: #404040;
         }
       }
     }
@@ -139,7 +292,7 @@
       align-items: center;
       gap: 10px;
       margin-top: 10px;
-      animation: fadeInUp 0.6s ease-out 0.4s both;
+      animation: fadeInUp 0.6s ease-out 0.5s both;
 
       p {
         margin: 0;
@@ -152,16 +305,12 @@
           color: #4a90e2;
         }
 
-        &:first-child {
-          font-size: 13px;
+        span {
+          color: #4a90e2;
+          transition: all 0.3s ease;
 
-          span {
-            color: #4a90e2;
-            transition: all 0.3s ease;
-
-            &:hover {
-              text-decoration: underline;
-            }
+          &:hover {
+            text-decoration: underline;
           }
         }
       }
@@ -169,7 +318,6 @@
   }
 }
 
-// Анимации
 @keyframes slideIn {
   from {
     opacity: 0;
@@ -191,18 +339,42 @@
     transform: translateY(0);
   }
 }
-.container {
-  .inputdiv:first-child {
-    animation: slideIn 0.5s ease-out 0.1s both;
-  }
 
-  .inputdiv:nth-child(2) {
-    animation: slideIn 0.5s ease-out 0.2s both;
+@keyframes floatFeather {
+  0%,
+  100% {
+    transform: translateY(0) rotate(45deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(55deg);
   }
 }
-.container h1 {
-  animation: fadeInUp 0.5s ease-out;
-  font-size: 28px;
-  margin-bottom: 10px;
-  color: white;
+
+@keyframes flyBird {
+  0% {
+    transform: translateX(-50px) translateY(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.05;
+  }
+  90% {
+    opacity: 0.05;
+  }
+  100% {
+    transform: translateX(calc(100vw + 50px)) translateY(-30px);
+    opacity: 0;
+  }
+}
+
+@keyframes windBlow {
+  0%,
+  100% {
+    opacity: 0.1;
+    transform: translateX(-5%);
+  }
+  50% {
+    opacity: 0.3;
+    transform: translateX(5%);
+  }
 }
