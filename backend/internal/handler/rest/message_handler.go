@@ -4,7 +4,11 @@ import (
 	"backend/internal/domain"
 	"backend/internal/service"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,21 +24,55 @@ func NewMessageHandler(messageService service.MessageService) *MessageHandler {
 	}
 }
 
-// SendMessage отправляет сообщение
-// @Summary Отправить сообщение
-// @Description Отправляет сообщение в чат
-// @Tags messages
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param chat_id query string true "ID чата"
-// @Param request body domain.SendMessageRequest true "Текст сообщения"
-// @Success 201 {object} domain.Message
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /api/messages [post]
+func (h *MessageHandler) UploadFile(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "файл не предоставлен"})
+		return
+	}
+
+	maxSize := int64(10 << 20)
+	if file.Size > maxSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "файл слишком большой (максимум 10MB)"})
+		return
+	}
+
+	ext := filepath.Ext(file.Filename)
+	filename := uuid.New().String() + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ext
+
+	workDir, _ := os.Getwd()
+	mimeType := file.Header.Get("Content-Type")
+
+	var uploadDir string
+	var fileURL string
+
+	if strings.HasPrefix(mimeType, "image/") {
+		uploadDir = filepath.Join(workDir, "uploads", "images")
+		fileURL = "/uploads/images/" + filename
+	} else {
+		uploadDir = filepath.Join(workDir, "uploads", "files")
+		fileURL = "/uploads/files/" + filename
+	}
+
+	os.MkdirAll(uploadDir, 0755)
+
+	filePath := filepath.Join(uploadDir, filename)
+
+	if err := c.SaveUploadedFile(file, filePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка сохранения файла"})
+		return
+	}
+
+	response := domain.UploadFileResponse{
+		FileURL:  fileURL,
+		FileName: file.Filename,
+		FileSize: file.Size,
+		MimeType: mimeType,
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
 func (h *MessageHandler) SendMessage(c *gin.Context) {
 	chatIDStr := c.Query("chat_id")
 	chatID, err := uuid.Parse(chatIDStr)
@@ -49,14 +87,12 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 		return
 	}
 
-	// Исправляем проблему с конвертацией userID
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
 		return
 	}
 
-	// Конвертируем userID из string в uuid.UUID
 	var userID uuid.UUID
 	switch v := userIDInterface.(type) {
 	case string:
@@ -81,21 +117,6 @@ func (h *MessageHandler) SendMessage(c *gin.Context) {
 	c.JSON(http.StatusCreated, message)
 }
 
-// GetMessages возвращает сообщения чата
-// @Summary Получить сообщения
-// @Description Возвращает сообщения чата с пагинацией
-// @Tags messages
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param chat_id query string true "ID чата"
-// @Param limit query int false "Лимит (default 50)"
-// @Param offset query int false "Смещение (default 0)"
-// @Success 200 {array} domain.Message
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Router /api/messages [get]
 func (h *MessageHandler) GetMessages(c *gin.Context) {
 	chatIDStr := c.Query("chat_id")
 	chatID, err := uuid.Parse(chatIDStr)
@@ -107,7 +128,6 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
 
-	// Исправляем проблему с конвертацией userID
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
@@ -138,20 +158,6 @@ func (h *MessageHandler) GetMessages(c *gin.Context) {
 	c.JSON(http.StatusOK, messages)
 }
 
-// EditMessage редактирует сообщение
-// @Summary Редактировать сообщение
-// @Description Редактирует текст отправленного сообщения
-// @Tags messages
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param message_id query string true "ID сообщения"
-// @Param request body object true "Новый текст"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Router /api/messages [put]
 func (h *MessageHandler) EditMessage(c *gin.Context) {
 	messageIDStr := c.Query("message_id")
 	messageID, err := uuid.Parse(messageIDStr)
@@ -168,7 +174,6 @@ func (h *MessageHandler) EditMessage(c *gin.Context) {
 		return
 	}
 
-	// Исправляем проблему с конвертацией userID
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})
@@ -199,19 +204,6 @@ func (h *MessageHandler) EditMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "сообщение отредактировано"})
 }
 
-// DeleteMessage удаляет сообщение
-// @Summary Удалить сообщение
-// @Description Удаляет сообщение (своё или если вы админ)
-// @Tags messages
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param message_id query string true "ID сообщения"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Router /api/messages [delete]
 func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 	messageIDStr := c.Query("message_id")
 	messageID, err := uuid.Parse(messageIDStr)
@@ -220,7 +212,6 @@ func (h *MessageHandler) DeleteMessage(c *gin.Context) {
 		return
 	}
 
-	// Исправляем проблему с конвертацией userID
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "пользователь не авторизован"})

@@ -84,7 +84,8 @@ function ChatList() {
         return;
       }
 
-      const response = await fetch("http://localhost:8080/api/chats/", {
+      // Исправлено: убран слеш в конце URL
+      const response = await fetch("http://localhost:8080/api/chats", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -134,6 +135,7 @@ function ChatList() {
         try {
           console.log("Запрашиваем участников чата...");
 
+          // Исправлено: убран слеш в конце URL
           const participantsResponse = await fetch(
             `http://localhost:8080/api/participants?chat_id=${chat.id}`,
             {
@@ -170,6 +172,7 @@ function ChatList() {
                   "Запрашиваем данные пользователя с ID:",
                   otherUserId,
                 );
+                // Исправлено: убран слеш в конце URL
                 const userResponse = await fetch(
                   `http://localhost:8080/api/users/${otherUserId}`,
                   {

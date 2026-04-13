@@ -1,6 +1,10 @@
 package rest
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,10 +14,31 @@ type RouteRegistrar interface {
 
 func SetupRouter(registrars ...RouteRegistrar) *gin.Engine {
 	router := gin.Default()
+	
+	// Отключаем автоматический редирект с слеша
+	router.RedirectTrailingSlash = false
+	router.RedirectFixedPath = false
 
 	router.Use(CORSMiddleware())
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+
+	workDir, _ := os.Getwd()
+	uploadsPath := filepath.Join(workDir, "uploads")
+	imagesPath := filepath.Join(uploadsPath, "images")
+	filesPath := filepath.Join(uploadsPath, "files")
+
+	os.MkdirAll(imagesPath, 0755)
+	os.MkdirAll(filesPath, 0755)
+
+	router.Use(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/uploads") {
+			c.Header("Cache-Control", "public, max-age=31536000")
+		}
+		c.Next()
+	})
+
+	router.Static("/uploads", uploadsPath)
 
 	public := router.Group("/api")
 	protected := router.Group("/api")
@@ -29,6 +54,7 @@ func SetupRouter(registrars ...RouteRegistrar) *gin.Engine {
 
 	return router
 }
+
 func (h *UserHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	public.POST("/register", h.Register)
 	public.POST("/login", h.Login)
@@ -36,7 +62,7 @@ func (h *UserHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	users := protected.Group("/users")
 	{
 		users.GET("/profile", h.GetProfile)
-		users.GET("/", h.GetAllUsers)
+		users.GET("", h.GetAllUsers)
 		users.GET("/search", h.SearchUsers)
 		users.GET("/:id", h.GetUser)
 		users.PUT("/:id", h.UpdateUser)
@@ -50,7 +76,7 @@ func (h *ChatHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	{
 		chats.POST("/private", h.CreatePrivateChat)
 		chats.POST("/group", h.CreateGroupChat)
-		chats.GET("/", h.GetUserChats)
+		chats.GET("", h.GetUserChats)
 		chats.GET("/all", h.GetAllChats)
 		chats.GET("/:id", h.GetChatByID)
 		chats.PUT("/:id", h.UpdateChat)
@@ -75,6 +101,7 @@ func (h *MessageHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 	messages := protected.Group("/messages")
 	{
 		messages.POST("", h.SendMessage)
+		messages.POST("/upload", h.UploadFile)
 		messages.GET("", h.GetMessages)
 		messages.PUT("", h.EditMessage)
 		messages.DELETE("", h.DeleteMessage)

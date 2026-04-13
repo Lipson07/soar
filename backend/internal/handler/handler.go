@@ -38,6 +38,7 @@ type ParticipantHandlerInterface interface {
 
 type MessageHandlerInterface interface {
 	SendMessage(c *gin.Context)
+	UploadFile(c *gin.Context)
 	GetMessages(c *gin.Context)
 	EditMessage(c *gin.Context)
 	DeleteMessage(c *gin.Context)

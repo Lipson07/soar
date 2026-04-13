@@ -19,19 +19,19 @@ func NewMessageRepository(db *sqlx.DB) *MessageRepository {
 
 func (r *MessageRepository) Create(ctx context.Context, message *domain.Message) error {
 	query := `
-		INSERT INTO messages (id, chat_id, user_id, text, reply_to, is_edited, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO messages (id, chat_id, user_id, type, text, file_url, file_name, file_size, mime_type, reply_to, is_edited, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		message.ID, message.ChatID, message.UserID,
-		message.Text, message.ReplyTo, message.IsEdited,
-		message.CreatedAt, message.UpdatedAt,
+		message.ID, message.ChatID, message.UserID, message.Type,
+		message.Text, message.FileURL, message.FileName, message.FileSize, message.MimeType,
+		message.ReplyTo, message.IsEdited, message.CreatedAt, message.UpdatedAt,
 	)
 	return err
 }
 
 func (r *MessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Message, error) {
-	query := `SELECT id, chat_id, user_id, text, reply_to, is_edited, created_at, updated_at, deleted_at 
+	query := `SELECT id, chat_id, user_id, type, text, file_url, file_name, file_size, mime_type, reply_to, is_edited, created_at, updated_at, deleted_at 
 		FROM messages WHERE id = $1 AND deleted_at IS NULL`
 	var message domain.Message
 	err := r.db.GetContext(ctx, &message, query, id)
@@ -43,7 +43,7 @@ func (r *MessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 
 func (r *MessageRepository) GetByChatID(ctx context.Context, chatID uuid.UUID, limit, offset int) ([]*domain.Message, error) {
 	query := `
-		SELECT id, chat_id, user_id, text, reply_to, is_edited, created_at, updated_at, deleted_at
+		SELECT id, chat_id, user_id, type, text, file_url, file_name, file_size, mime_type, reply_to, is_edited, created_at, updated_at, deleted_at
 		FROM messages
 		WHERE chat_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC
@@ -71,7 +71,7 @@ func (r *MessageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *MessageRepository) GetLastMessage(ctx context.Context, chatID uuid.UUID) (*domain.MessageInfo, error) {
 	query := `
-		SELECT id, text, user_id, created_at
+		SELECT id, type, text, file_url, file_name, user_id, created_at
 		FROM messages
 		WHERE chat_id = $1 AND deleted_at IS NULL
 		ORDER BY created_at DESC

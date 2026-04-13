@@ -7,13 +7,19 @@ import {
   setLoading,
 } from "../../../store/selectedChatSlice";
 import { selectUser, selectToken } from "../../../store/userSlice";
+import { BsFileEarmark, BsDownload } from "react-icons/bs";
 import style from "./MessageList.module.scss";
 
 interface Message {
   id: string;
   chat_id: string;
   user_id: string;
+  type: "text" | "image" | "file";
   text: string;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  mime_type?: string;
   reply_to: string | null;
   is_edited: boolean;
   created_at: string;
@@ -29,6 +35,7 @@ function MessageList() {
   const dispatch = useDispatch();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const isFetchingRef = useRef(false);
 
@@ -46,7 +53,6 @@ function MessageList() {
     const authToken = getToken();
 
     if (!authToken) {
-      console.error("No token available");
       setIsLoadingMessages(false);
       dispatch(setLoading(false));
       isFetchingRef.current = false;
@@ -55,7 +61,6 @@ function MessageList() {
 
     try {
       const url = `http://localhost:8080/api/messages?chat_id=${currentChat.id}&limit=50&offset=0`;
-      console.log("Fetching messages for chat:", currentChat.id);
 
       const response = await fetch(url, {
         method: "GET",
@@ -78,10 +83,6 @@ function MessageList() {
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
         );
         dispatch(setMessages(sortedMessages));
-      } else if (response.status === 401) {
-        console.error("Unauthorized - please login again");
-      } else {
-        console.error("Failed to fetch messages:", response.status);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -140,6 +141,13 @@ function MessageList() {
     }
   };
 
+  const formatFileSize = (bytes?: number): string => {
+    if (!bytes) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
   const groupMessagesByDate = () => {
     const groups: { [key: string]: Message[] } = {};
 
@@ -152,6 +160,55 @@ function MessageList() {
     });
 
     return groups;
+  };
+
+  const renderMessageContent = (message: Message) => {
+    switch (message.type) {
+      case "image":
+        return (
+          <div className={style.imageMessage}>
+            <img
+              src={`http://localhost:8080${message.file_url}`}
+              alt={message.file_name || "Изображение"}
+              onClick={() =>
+                setLightboxImage(`http://localhost:8080${message.file_url}`)
+              }
+              loading="lazy"
+            />
+            {message.text && message.text !== message.file_name && (
+              <p className={style.imageCaption}>{message.text}</p>
+            )}
+          </div>
+        );
+
+      case "file":
+        return (
+          <div className={style.fileMessage}>
+            <a
+              href={`http://localhost:8080${message.file_url}`}
+              download={message.file_name}
+              className={style.fileDownload}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BsFileEarmark size={32} />
+              <div className={style.fileDetails}>
+                <span className={style.fileName}>{message.file_name}</span>
+                <span className={style.fileSize}>
+                  {formatFileSize(message.file_size)}
+                </span>
+              </div>
+              <BsDownload size={20} className={style.downloadIcon} />
+            </a>
+            {message.text && message.text !== message.file_name && (
+              <p className={style.fileCaption}>{message.text}</p>
+            )}
+          </div>
+        );
+
+      default:
+        return <p className={style.messageText}>{message.text}</p>;
+    }
   };
 
   if (!currentChat) {
@@ -174,36 +231,50 @@ function MessageList() {
   const messageGroups = groupMessagesByDate();
 
   return (
-    <div className={style.messageList}>
-      <div className={style.messagesContainer}>
-        {Object.entries(messageGroups).map(([date, dateMessages]) => (
-          <div key={date} className={style.dateGroup}>
-            <div className={style.dateDivider}>
-              <span>{date}</span>
-            </div>
-            {dateMessages.map((message) => {
-              const isOwn = message.user_id === currentUser?.id;
+    <>
+      <div className={style.messageList}>
+        <div className={style.messagesContainer}>
+          {Object.entries(messageGroups).map(([date, dateMessages]) => (
+            <div key={date} className={style.dateGroup}>
+              <div className={style.dateDivider}>
+                <span>{date}</span>
+              </div>
+              {dateMessages.map((message) => {
+                const isOwn = message.user_id === currentUser?.id;
 
-              return (
-                <div
-                  key={message.id}
-                  className={`${style.message} ${isOwn ? style.own : style.other}`}
-                >
-                  <div className={style.messageBubble}>
-                    <p className={style.messageText}>{message.text}</p>
-                    <span className={style.timestamp}>
-                      {formatTime(message.created_at)}
-                      {message.is_edited && " (ред.)"}
-                    </span>
+                return (
+                  <div
+                    key={message.id}
+                    className={`${style.message} ${isOwn ? style.own : style.other}`}
+                  >
+                    <div className={style.messageBubble}>
+                      {renderMessageContent(message)}
+                      <span className={style.timestamp}>
+                        {formatTime(message.created_at)}
+                        {message.is_edited && " (ред.)"}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+                );
+              })}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
-    </div>
+
+      {lightboxImage && (
+        <div className={style.lightbox} onClick={() => setLightboxImage(null)}>
+          <img src={lightboxImage} alt="Просмотр изображения" />
+          <button
+            className={style.closeLightbox}
+            onClick={() => setLightboxImage(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
