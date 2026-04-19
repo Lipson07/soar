@@ -1,11 +1,103 @@
+:root {
+  // Темная тема (по умолчанию)
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #252525;
+  --bg-sidebar: #1a1a1a;
+  --bg-panel: #1e1e1e;
+  --bg-chat: #1a1a1a;
+  --bg-message-own: #3a3a3a;
+  --bg-message-other: #2a2a2a;
+  --bg-input: #2a2a2a;
+  --bg-input-focus: #323232;
+  --bg-modal: #2a2a2a;
+  --bg-avatar: #3a3a3a;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.08);
+  --bg-button: #3a3a3a;
+  --bg-button-hover: #4a4a4a;
+
+  --text-primary: #e0e0e0;
+  --text-secondary: #c0c0c0;
+  --text-tertiary: #a0a0a0;
+  --text-muted: #7a7a7a;
+  --text-placeholder: #6a6a6a;
+  --text-white: #ffffff;
+
+  --border-color: rgba(255, 255, 255, 0.06);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  --primary-color: #f5a623;
+  --online-color: #5a9e6e;
+  --danger-color: #ff6b6b;
+  --success-color: #4caf50;
+
+  --scrollbar-thumb: #4a4a4a;
+
+  --font-size-base: 14px;
+  --font-size-small: 12px;
+  --font-size-large: 16px;
+  --font-size-xl: 20px;
+
+  --shadow-panel: 4px 0 20px rgba(0, 0, 0, 0.3);
+  --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+// Светлая тема
+[data-theme="light"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #ebebeb;
+  --bg-sidebar: #f5f5f5;
+  --bg-panel: #ffffff;
+  --bg-chat: #f0f0f0;
+  --bg-message-own: #e3f2fd;
+  --bg-message-other: #ffffff;
+  --bg-input: #ffffff;
+  --bg-input-focus: #fafafa;
+  --bg-modal: #ffffff;
+  --bg-avatar: #e0e0e0;
+  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-active: rgba(0, 0, 0, 0.08);
+  --bg-button: #e0e0e0;
+  --bg-button-hover: #d0d0d0;
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #3a3a3a;
+  --text-tertiary: #5a5a5a;
+  --text-muted: #7a7a7a;
+  --text-placeholder: #9a9a9a;
+  --text-white: #1a1a1a;
+
+  --border-color: rgba(0, 0, 0, 0.06);
+  --border-light: rgba(0, 0, 0, 0.08);
+  --border-medium: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  --primary-color: #f5a623;
+  --online-color: #4caf50;
+  --danger-color: #f44336;
+  --success-color: #4caf50;
+
+  --scrollbar-thumb: #c0c0c0;
+
+  --shadow-panel: 4px 0 20px rgba(0, 0, 0, 0.1);
+  --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
 }
 
 body {
@@ -21,11 +113,14 @@ body {
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
 }
 
 a {
   text-decoration: none;
+  color: inherit;
 }
 
 h1,
@@ -36,6 +131,7 @@ h5,
 h6 {
   font-weight: 600;
   letter-spacing: -0.02em;
+  color: var(--text-primary);
 }
 
 button,
@@ -43,11 +139,24 @@ input,
 textarea,
 select {
   font-family: inherit;
+  font-size: var(--font-size-base);
 }
 
-::selection {
-  background: rgba(245, 166, 35, 0.25);
-  color: #ededef;
+input,
+textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+
+  &:focus {
+    outline: none;
+    background: var(--bg-input-focus);
+    border-color: var(--primary-color);
+  }
+
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
 }
 
 ::-webkit-scrollbar {
@@ -60,10 +169,10 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--scrollbar-thumb);
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--text-muted);
 }

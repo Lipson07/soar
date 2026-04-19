@@ -1,10 +1,10 @@
 .sidebar {
   width: 30%;
   height: 100%;
-  background: rgba(41, 41, 41, 0.95);
+  background: var(--bg-sidebar);
   display: flex;
   flex-direction: row;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
 
@@ -19,14 +19,14 @@
 
     .cloud {
       position: absolute;
-      background: rgba(255, 255, 255, 0.02);
+      background: var(--bg-hover);
       border-radius: 60px;
 
       &::before,
       &::after {
         content: "";
         position: absolute;
-        background: rgba(255, 255, 255, 0.02);
+        background: var(--bg-hover);
         border-radius: 50%;
       }
     }
@@ -136,7 +136,7 @@
       background: linear-gradient(
         90deg,
         transparent,
-        rgba(255, 255, 255, 0.015),
+        var(--bg-hover),
         transparent
       );
       animation: windBlow 8s ease-in-out infinite;
@@ -157,7 +157,7 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #4a4a4a;
+      background: var(--scrollbar-thumb);
       border-radius: 0;
     }
   }

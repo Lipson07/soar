@@ -15,13 +15,13 @@
   top: 0;
   bottom: 0;
   width: 360px;
-  background: rgba(30, 30, 30, 0.98);
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-light);
   z-index: 999;
   display: flex;
   flex-direction: column;
   animation: slideIn 0.3s ease;
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-panel);
 }
 
 .header {
@@ -29,20 +29,20 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-light);
 
   h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: var(--font-size-xl);
     font-weight: 600;
-    color: white;
+    color: var(--text-primary);
   }
 }
 
 .closeButton {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-tertiary);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -52,8 +52,8 @@
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: white;
+    background: var(--bg-hover);
+    color: var(--text-primary);
   }
 }
 
@@ -71,11 +71,11 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--scrollbar-thumb);
     border-radius: 2px;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--text-muted);
     }
   }
 }
@@ -93,7 +93,7 @@
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  border: 3px solid var(--border-light);
   margin-bottom: 16px;
 }
 
@@ -108,7 +108,7 @@
   font-size: 36px;
   font-weight: 600;
   color: white;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  border: 3px solid var(--border-light);
   margin-bottom: 16px;
 }
 
@@ -117,14 +117,14 @@
     margin: 0 0 4px 0;
     font-size: 24px;
     font-weight: 600;
-    color: white;
+    color: var(--text-primary);
   }
 }
 
 .email {
   display: block;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 14px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-base);
   margin-bottom: 8px;
 }
 
@@ -133,24 +133,24 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .statusDot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #888;
+  background: var(--text-muted);
 
   &.online {
-    background: #4caf50;
+    background: var(--online-color);
     box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
   }
 }
 
 .infoSection {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-hover);
   border-radius: 16px;
   padding: 16px;
   margin-bottom: 24px;
@@ -161,22 +161,22 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-color);
 
   &:last-child {
     border-bottom: none;
   }
 
   .label {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.4);
+    font-size: var(--font-size-small);
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .value {
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-base);
+    color: var(--text-primary);
     word-break: break-all;
   }
 }
@@ -192,11 +192,11 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
-  color: white;
-  font-size: 14px;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
@@ -206,8 +206,8 @@
   }
 
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: var(--bg-active);
+    border-color: var(--border-light);
     transform: translateY(-1px);
   }
 
@@ -216,7 +216,7 @@
   }
 
   &.logout {
-    color: #ff6b6b;
+    color: var(--danger-color);
     margin-top: 8px;
 
     &:hover {
@@ -231,26 +231,9 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
 .avatarWrapper {
   position: relative;
   cursor: pointer;
@@ -288,28 +271,28 @@
   gap: 8px;
 
   label {
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
   }
 }
 
 .input {
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  color: white;
-  font-size: 14px;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
   outline: none;
   transition: all 0.2s;
 
   &:focus {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--bg-input-focus);
+    border-color: var(--primary-color);
   }
 
   &::placeholder {
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--text-placeholder);
   }
 }
 
@@ -318,8 +301,8 @@
   background: rgba(255, 107, 107, 0.1);
   border: 1px solid rgba(255, 107, 107, 0.3);
   border-radius: 8px;
-  color: #ff6b6b;
-  font-size: 13px;
+  color: var(--danger-color);
+  font-size: var(--font-size-small);
   text-align: center;
 }
 
@@ -333,15 +316,15 @@
   flex: 1;
   padding: 12px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover);
   }
 
   &:disabled {
@@ -353,11 +336,11 @@
 .saveButton {
   flex: 1;
   padding: 12px;
-  background: #4caf50;
+  background: var(--success-color);
   border: none;
   border-radius: 10px;
   color: white;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -369,5 +352,23 @@
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }

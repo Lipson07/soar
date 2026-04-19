@@ -2,7 +2,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-  background: #1a1a1a;
+  background: var(--bg-chat);
 
   &::-webkit-scrollbar {
     width: 3px;
@@ -13,7 +13,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #3a3a3a;
+    background: var(--scrollbar-thumb);
     border-radius: 0;
   }
 }
@@ -36,11 +36,11 @@
   margin: 20px 0;
 
   span {
-    background: #2a2a2a;
+    background: var(--bg-tertiary);
     padding: 4px 12px;
     border-radius: 4px;
     font-size: 11px;
-    color: #7a7a7a;
+    color: var(--text-muted);
     font-weight: 400;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -67,21 +67,21 @@
   position: relative;
 
   .own & {
-    background: #3a3a3a;
-    color: #e0e0e0;
+    background: var(--bg-message-own);
+    color: var(--text-primary);
     border-bottom-right-radius: 2px;
   }
 
   .other & {
-    background: #2a2a2a;
-    color: #c0c0c0;
+    background: var(--bg-message-other);
+    color: var(--text-primary);
     border-bottom-left-radius: 2px;
   }
 }
 
 .messageText {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   line-height: 1.5;
   word-wrap: break-word;
   white-space: pre-wrap;
@@ -94,14 +94,7 @@
   margin-left: 8px;
   display: inline-block;
   font-weight: 400;
-
-  .own & {
-    color: #a0a0a0;
-  }
-
-  .other & {
-    color: #8a8a8a;
-  }
+  color: var(--text-muted);
 }
 
 .emptyState {
@@ -110,12 +103,12 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6a6a6a;
+  color: var(--text-muted);
   text-align: center;
 
   p {
     margin-top: 16px;
-    font-size: 14px;
+    font-size: var(--font-size-base);
     font-weight: 400;
   }
 }
@@ -123,8 +116,8 @@
 .spinner {
   width: 32px;
   height: 32px;
-  border: 2px solid #2a2a2a;
-  border-top-color: #5a5a5a;
+  border: 2px solid var(--bg-avatar);
+  border-top-color: var(--text-muted);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -135,20 +128,6 @@
   }
 }
 
-@media (max-width: 768px) {
-  .messageList {
-    padding: 12px;
-  }
-
-  .messageBubble {
-    max-width: 85%;
-    padding: 8px 12px;
-  }
-
-  .messageText {
-    font-size: 13px;
-  }
-}
 .imageMessage {
   img {
     max-width: 100%;
@@ -164,8 +143,8 @@
 
   .imageCaption {
     margin-top: 8px;
-    font-size: 14px;
-    color: #c0c0c0;
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
   }
 }
 
@@ -175,13 +154,13 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-hover);
     border-radius: 8px;
     text-decoration: none;
     transition: background 0.15s ease;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--bg-active);
     }
 
     .fileDetails {
@@ -191,25 +170,25 @@
       flex: 1;
 
       .fileName {
-        font-size: 14px;
-        color: #e0e0e0;
+        font-size: var(--font-size-base);
+        color: var(--text-primary);
       }
 
       .fileSize {
-        font-size: 12px;
-        color: #8a8a8a;
+        font-size: var(--font-size-small);
+        color: var(--text-muted);
       }
     }
 
     .downloadIcon {
-      color: #8a8a8a;
+      color: var(--text-muted);
     }
   }
 
   .fileCaption {
     margin-top: 8px;
-    font-size: 14px;
-    color: #c0c0c0;
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
   }
 }
 
@@ -252,5 +231,20 @@
     &:hover {
       background: rgba(255, 255, 255, 0.2);
     }
+  }
+}
+
+@media (max-width: 768px) {
+  .messageList {
+    padding: 12px;
+  }
+
+  .messageBubble {
+    max-width: 85%;
+    padding: 8px 12px;
+  }
+
+  .messageText {
+    font-size: 13px;
   }
 }

@@ -14,7 +14,7 @@ import {
 import style from "./ChatList.module.scss";
 import SearchBar from "../SearchBar/SearchBar";
 import StoriesSection from "../StoriesSection/StoriesSection";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface User {
   id: string;
@@ -43,6 +43,9 @@ interface Chat {
     text: string;
     user_id: string;
     created_at: string;
+    file_url?: string;
+    file_name?: string;
+    type?: string;
   } | null;
   unread_count?: number;
   other_user_id?: string | null;
@@ -65,16 +68,7 @@ function ChatList() {
 
   const showSearchResults = isSearchFocused && searchQuery.trim() !== "";
 
-  useEffect(() => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      setCurrentUserId(user.id);
-      fetchMyChats(user.id);
-    }
-  }, []);
-
-  const fetchMyChats = async (userId: string) => {
+  const fetchMyChats = useCallback(async (userId: string) => {
     try {
       const token = localStorage.getItem("token");
 
@@ -84,7 +78,6 @@ function ChatList() {
         return;
       }
 
-      // Исправлено: убран слеш в конце URL
       const response = await fetch("http://localhost:8080/api/chats", {
         method: "GET",
         headers: {
@@ -111,7 +104,27 @@ function ChatList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      setCurrentUserId(user.id);
+      fetchMyChats(user.id);
+    }
+  }, [fetchMyChats]);
+
+  // Периодическое обновление чатов
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const interval = setInterval(() => {
+      fetchMyChats(currentUserId);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [currentUserId, fetchMyChats]);
 
   const enrichPrivateChatNames = async (
     chats: Chat[],
@@ -120,22 +133,11 @@ function ChatList() {
   ) => {
     const enriched = [...chats];
 
-    console.log("=== Начало обогащения чатов ===");
-    console.log("Current user ID:", userId);
-    console.log("Всего чатов:", chats.length);
-
     for (let i = 0; i < enriched.length; i++) {
       const chat = enriched[i];
-      console.log(`\n--- Обработка чата ${i + 1}/${enriched.length} ---`);
-      console.log("Chat ID:", chat.id);
-      console.log("Chat type:", chat.type);
-      console.log("Chat name до обогащения:", chat.name);
 
       if (chat.type === "private") {
         try {
-          console.log("Запрашиваем участников чата...");
-
-          // Исправлено: убран слеш в конце URL
           const participantsResponse = await fetch(
             `http://localhost:8080/api/participants?chat_id=${chat.id}`,
             {
@@ -147,32 +149,18 @@ function ChatList() {
             },
           );
 
-          console.log(
-            "Статус ответа participants:",
-            participantsResponse.status,
-          );
-
           if (participantsResponse.ok) {
             const participants = await participantsResponse.json();
-            console.log("Участники чата (participants):", participants);
 
             const otherParticipant = participants.find(
               (p: any) => p.user_id !== userId,
             );
 
-            console.log("Другой участник (participant):", otherParticipant);
-
             if (otherParticipant) {
               const otherUserId = otherParticipant.user_id;
               let user = usersCache.get(otherUserId);
-              console.log("Пользователь в кеше:", user);
 
               if (!user) {
-                console.log(
-                  "Запрашиваем данные пользователя с ID:",
-                  otherUserId,
-                );
-                // Исправлено: убран слеш в конце URL
                 const userResponse = await fetch(
                   `http://localhost:8080/api/users/${otherUserId}`,
                   {
@@ -184,55 +172,25 @@ function ChatList() {
                   },
                 );
 
-                console.log("Статус ответа users:", userResponse.status);
-
                 if (userResponse.ok) {
                   user = await userResponse.json();
-                  console.log("Получены данные пользователя:", user);
                   setUsersCache((prev) => new Map(prev).set(user.id, user));
-                } else {
-                  console.error(
-                    "Ошибка получения пользователя, статус:",
-                    userResponse.status,
-                  );
                 }
               }
 
               if (user) {
-                console.log("Устанавливаем имя чата как:", user.username);
                 enriched[i].name = user.username;
                 enriched[i].other_user_id = user.id;
                 enriched[i].other_user_name = user.username;
-              } else {
-                console.error("Не удалось получить данные пользователя");
+                enriched[i].avatar_url = user.avatar_url;
               }
-            } else {
-              console.warn("Не найден другой участник!");
-              console.log("Current user ID для поиска:", userId);
-              console.log("Все участники:", participants);
             }
-          } else {
-            console.error(
-              "Ошибка получения участников, статус:",
-              participantsResponse.status,
-            );
           }
         } catch (error) {
           console.error("Ошибка получения имени для чата:", chat.id, error);
         }
-      } else {
-        console.log("Пропускаем чат (не private)");
       }
-
-      console.log("Chat name после обогащения:", enriched[i].name);
     }
-
-    console.log("\n=== Финальный список чатов ===");
-    enriched.forEach((chat, index) => {
-      console.log(
-        `${index + 1}. Chat ID: ${chat.id}, Name: ${chat.name}, Type: ${chat.type}`,
-      );
-    });
 
     return enriched;
   };
@@ -275,16 +233,32 @@ function ChatList() {
   };
 
   const getChatName = (chat: Chat) => {
-    console.log("getChatName для чата:", chat.id, chat.name, chat.type);
     if (chat.type === "private") {
-      return chat.name || "Приватный чат";
+      return chat.name || chat.other_user_name || "Приватный чат";
     }
     return chat.name || "Без названия";
   };
 
   const getLastMessageText = (chat: Chat) => {
-    if (chat.last_message && chat.last_message.text) {
-      return chat.last_message.text;
+    if (chat.last_message) {
+      const msg = chat.last_message;
+
+      // Если это файл или изображение
+      if (msg.type === "image") {
+        return "📷 Изображение";
+      }
+      if (msg.type === "file") {
+        return `📎 ${msg.file_name || "Файл"}`;
+      }
+
+      // Текстовое сообщение
+      if (msg.text) {
+        // Если сообщение от текущего пользователя
+        if (msg.user_id === currentUserId) {
+          return `Вы: ${msg.text}`;
+        }
+        return msg.text;
+      }
     }
     return "Нет сообщений";
   };
@@ -300,6 +274,8 @@ function ChatList() {
       updated_at: user.updated_at || new Date().toISOString(),
       last_message_at: null,
       unread_count: 0,
+      other_user_id: user.id,
+      other_user_name: user.username,
     };
 
     dispatch(toggleChat(chat));
@@ -341,7 +317,7 @@ function ChatList() {
   };
 
   const formatLastSeen = (dateString: string | null | undefined) => {
-    if (!dateString) return "Никогда";
+    if (!dateString) return "";
     const date = new Date(dateString);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -470,40 +446,35 @@ function ChatList() {
                 </button>
               </div>
             ) : (
-              myChats.map((chat) => {
-                console.log("Рендер чата:", chat.id, "name:", chat.name);
-                return (
-                  <div
-                    key={chat.id}
-                    className={`${style.chatItem} ${
-                      isChatActive(chat.id) ? style.active : ""
-                    }`}
-                    onClick={() => handleChatClick(chat)}
-                  >
-                    <div className={style.avatar}>{renderChatAvatar(chat)}</div>
-                    <div className={style.chatInfo}>
-                      <div className={style.chatHeader}>
-                        <div className={style.chatName}>
-                          {getChatName(chat)}
-                        </div>
-                        <div className={style.timestamp}>
-                          {formatDate(chat.last_message_at || chat.updated_at)}
-                        </div>
-                      </div>
-                      <div className={style.messagePreview}>
-                        <div className={style.lastMessage}>
-                          {getLastMessageText(chat)}
-                        </div>
-                        {chat.unread_count && chat.unread_count > 0 && (
-                          <div className={style.unreadBadge}>
-                            {chat.unread_count}
-                          </div>
-                        )}
+              myChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className={`${style.chatItem} ${
+                    isChatActive(chat.id) ? style.active : ""
+                  } ${chat.unread_count && chat.unread_count > 0 ? style.unread : ""}`}
+                  onClick={() => handleChatClick(chat)}
+                >
+                  <div className={style.avatar}>{renderChatAvatar(chat)}</div>
+                  <div className={style.chatInfo}>
+                    <div className={style.chatHeader}>
+                      <div className={style.chatName}>{getChatName(chat)}</div>
+                      <div className={style.timestamp}>
+                        {formatDate(chat.last_message_at || chat.updated_at)}
                       </div>
                     </div>
+                    <div className={style.messagePreview}>
+                      <div className={style.lastMessage}>
+                        {getLastMessageText(chat)}
+                      </div>
+                      {chat.unread_count && chat.unread_count > 0 && (
+                        <div className={style.unreadBadge}>
+                          {chat.unread_count}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                );
-              })
+                </div>
+              ))
             )}
           </>
         )}

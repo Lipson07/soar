@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: rgba(41, 41, 41, 0.95);
+  background: var(--bg-sidebar);
 }
 
 .header {
@@ -18,9 +18,9 @@
   gap: 8px;
 
   h1 {
-    font-size: 20px;
+    font-size: var(--font-size-xl);
     font-weight: 500;
-    color: #e0e0e0;
+    color: var(--text-primary);
     margin: 0;
     letter-spacing: -0.02em;
   }
@@ -36,11 +36,11 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #9e9e9e;
+  color: var(--text-tertiary);
   transition: color 0.15s ease;
 
   &:hover {
-    color: #e0e0e0;
+    color: var(--text-primary);
   }
 }
 
@@ -54,7 +54,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #4a4a4a;
+    background: var(--scrollbar-thumb);
     border-radius: 0;
   }
 }
@@ -71,26 +71,15 @@
   background: transparent;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--bg-hover);
   }
 
   &.active {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--bg-active);
 
     .chatName {
-      color: #e0e0e0;
+      color: var(--text-primary);
       font-weight: 500;
-    }
-  }
-
-  &.unread {
-    .chatName {
-      color: #e0e0e0;
-      font-weight: 500;
-    }
-
-    .lastMessage {
-      color: #a0a0a0;
     }
   }
 }
@@ -111,13 +100,13 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: #3a3a3a;
+  background: var(--bg-avatar);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 500;
-  color: #a0a0a0;
-  font-size: 14px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-base);
   text-transform: uppercase;
 }
 
@@ -127,9 +116,9 @@
   right: 2px;
   width: 10px;
   height: 10px;
-  background: #5a9e6e;
+  background: var(--online-color);
   border-radius: 50%;
-  border: 2px solid rgba(41, 41, 41, 0.95);
+  border: 2px solid var(--bg-sidebar);
 }
 
 .chatInfo {
@@ -145,9 +134,9 @@
 }
 
 .chatName {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 400;
-  color: #c0c0c0;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -155,7 +144,7 @@
 
 .timestamp {
   font-size: 10px;
-  color: #6a6a6a;
+  color: var(--text-muted);
   flex-shrink: 0;
   margin-left: 8px;
   font-weight: 400;
@@ -169,8 +158,8 @@
 }
 
 .lastMessage {
-  font-size: 12px;
-  color: #7a7a7a;
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -182,7 +171,7 @@
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background: linear-gradient(135deg, #5a9e6e 0%, #4a8e5e 100%);
+  background: linear-gradient(135deg, var(--online-color) 0%, #4a8e5e 100%);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -194,15 +183,6 @@
   flex-shrink: 0;
 }
 
-.unreadIndicator {
-  width: 8px;
-  height: 8px;
-  background: #5a9e6e;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 8px rgba(90, 158, 110, 0.4);
-}
-
 .searchHeader {
   display: flex;
   justify-content: space-between;
@@ -211,16 +191,16 @@
   margin: 4px 8px;
   font-size: 11px;
   font-weight: 500;
-  color: #6a6a6a;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .resultsCount {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-active);
   padding: 2px 8px;
   border-radius: 4px;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   font-size: 10px;
   font-weight: 400;
 }
@@ -232,14 +212,14 @@
   justify-content: center;
   gap: 16px;
   padding: 60px 20px;
-  color: #6a6a6a;
+  color: var(--text-muted);
 
   svg {
     opacity: 0.4;
   }
 
   p {
-    font-size: 14px;
+    font-size: var(--font-size-base);
     margin: 0;
     font-weight: 400;
   }
@@ -247,18 +227,18 @@
 
 .createChatBtn {
   background: transparent;
-  border: 1px solid #4a4a4a;
+  border: 1px solid var(--border-medium);
   padding: 8px 20px;
   border-radius: 6px;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-size-small);
   font-weight: 400;
   transition: all 0.15s ease;
 
   &:hover {
-    border-color: #6a6a6a;
-    color: #c0c0c0;
+    border-color: var(--text-muted);
+    color: var(--text-secondary);
   }
 }
 
@@ -269,14 +249,14 @@
   justify-content: center;
   gap: 12px;
   padding: 40px 20px;
-  color: #6a6a6a;
+  color: var(--text-muted);
 }
 
 .spinner {
   width: 28px;
   height: 28px;
-  border: 2px solid #3a3a3a;
-  border-top-color: #6a6a6a;
+  border: 2px solid var(--bg-avatar);
+  border-top-color: var(--text-muted);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
