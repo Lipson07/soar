@@ -42,4 +42,22 @@ type MessageHandlerInterface interface {
 	GetMessages(c *gin.Context)
 	EditMessage(c *gin.Context)
 	DeleteMessage(c *gin.Context)
+	AddReaction(c *gin.Context)
+	RemoveReaction(c *gin.Context)
+}
+
+type SecurityHandlerInterface interface {
+	GetSettings(c *gin.Context)
+	UpdateSettings(c *gin.Context)
+	SetupTwoFactor(c *gin.Context)
+	VerifyTwoFactor(c *gin.Context)
+	DisableTwoFactor(c *gin.Context)
+	GetSessions(c *gin.Context)
+	TerminateSession(c *gin.Context)
+	TerminateAllOtherSessions(c *gin.Context)
+	GetSecurityReport(c *gin.Context)
+}
+type FilesHandlerInterface interface {
+	GetFiles(c *gin.Context)
+	DeleteFile(c *gin.Context)
 }

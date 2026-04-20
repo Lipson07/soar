@@ -1,8 +1,9 @@
 package service
 
 import (
-	"backend/internal/domain"
 	"context"
+
+	"backend/internal/domain"
 
 	"github.com/google/uuid"
 )
@@ -54,4 +55,25 @@ type MessageService interface {
 	DeleteMessage(ctx context.Context, messageID uuid.UUID, userID uuid.UUID) error
 	GetMessageByID(ctx context.Context, messageID uuid.UUID) (*domain.Message, error)
 	GetChatMessages(ctx context.Context, chatID uuid.UUID, limit, offset int) ([]*domain.Message, error)
+}
+
+type SecurityService interface {
+	GetUserSettings(ctx context.Context, userID uuid.UUID) (*domain.SecuritySettings, error)
+	UpdateSettings(ctx context.Context, userID uuid.UUID, req *domain.UpdateSecuritySettingsRequest) error
+	SetupTwoFactor(ctx context.Context, userID uuid.UUID, username string) (*domain.TwoFactorSetup, error)
+	VerifyAndEnableTwoFactor(ctx context.Context, userID uuid.UUID, code string, secret string) (bool, error)
+	DisableTwoFactor(ctx context.Context, userID uuid.UUID) error
+	VerifyTwoFactorCode(ctx context.Context, userID uuid.UUID, code string) (bool, error)
+	GetUserSessions(ctx context.Context, userID uuid.UUID, currentToken string) ([]domain.UserSession, error)
+	TerminateSession(ctx context.Context, userID uuid.UUID, sessionID int64, currentToken string) error
+	TerminateAllOtherSessions(ctx context.Context, userID uuid.UUID, currentToken string) error
+	GenerateSecurityReport(ctx context.Context, userID uuid.UUID) (*domain.SecurityReport, error)
+	CreateSession(ctx context.Context, userID uuid.UUID, deviceInfo, deviceType, ipAddress, userAgent string) (*domain.UserSession, error)
+}
+
+type FileService interface {
+	SaveFile(ctx context.Context, file *domain.File) error
+	GetAllFiles(ctx context.Context, userID uuid.UUID) ([]*domain.File, error)
+	GetFilesByChat(ctx context.Context, chatID uuid.UUID) ([]*domain.File, error)
+	DeleteFile(ctx context.Context, id uuid.UUID) error
 }

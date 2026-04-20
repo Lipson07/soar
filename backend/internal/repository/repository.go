@@ -52,3 +52,29 @@ type MessageRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	GetLastMessage(ctx context.Context, chatID uuid.UUID) (*domain.MessageInfo, error)
 }
+type SecurityRepository interface {
+	GetUserSecuritySettings(ctx context.Context, userID uuid.UUID) (*domain.SecuritySettings, error)
+	CreateDefaultSettings(ctx context.Context, userID uuid.UUID) (*domain.SecuritySettings, error)
+	UpdateSecuritySettings(ctx context.Context, settings *domain.SecuritySettings) error
+	EnableTwoFactor(ctx context.Context, userID uuid.UUID, secret string) error
+	DisableTwoFactor(ctx context.Context, userID uuid.UUID) error
+	CreateAuditLog(ctx context.Context, log *domain.SecurityAuditLog) error
+	GetUserAuditLogs(ctx context.Context, userID uuid.UUID, limit int) ([]domain.SecurityAuditLog, error)
+}
+
+type SessionRepository interface {
+	CreateSession(ctx context.Context, session *domain.UserSession) error
+	GetUserActiveSessions(ctx context.Context, userID uuid.UUID) ([]domain.UserSession, error)
+	TerminateSession(ctx context.Context, sessionID int64, userID uuid.UUID) error
+	TerminateAllOtherSessions(ctx context.Context, userID uuid.UUID, currentSessionToken string) error
+	UpdateSessionActivity(ctx context.Context, sessionToken string) error
+	GetSessionByToken(ctx context.Context, token string) (*domain.UserSession, error)
+}
+type FileRepository interface {
+	Create(ctx context.Context, file *domain.File) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.File, error)
+	GetAll(ctx context.Context) ([]*domain.File, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.File, error)
+	GetByChatID(ctx context.Context, chatID uuid.UUID) ([]*domain.File, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}

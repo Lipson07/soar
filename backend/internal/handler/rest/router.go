@@ -14,8 +14,7 @@ type RouteRegistrar interface {
 
 func SetupRouter(registrars ...RouteRegistrar) *gin.Engine {
 	router := gin.Default()
-	
-	// Отключаем автоматический редирект с слеша
+
 	router.RedirectTrailingSlash = false
 	router.RedirectFixedPath = false
 
@@ -105,5 +104,26 @@ func (h *MessageHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 		messages.GET("", h.GetMessages)
 		messages.PUT("", h.EditMessage)
 		messages.DELETE("", h.DeleteMessage)
+	}
+}
+func (h *SecurityHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	security := protected.Group("/security")
+	{
+		security.GET("/settings", h.GetSettings)
+		security.PUT("/settings", h.UpdateSettings)
+		security.POST("/2fa/setup", h.SetupTwoFactor)
+		security.POST("/2fa/verify", h.VerifyTwoFactor)
+		security.DELETE("/2fa", h.DisableTwoFactor)
+		security.GET("/sessions", h.GetSessions)
+		security.DELETE("/sessions/:sessionId", h.TerminateSession)
+		security.DELETE("/sessions", h.TerminateAllOtherSessions)
+		security.GET("/report", h.GetSecurityReport)
+	}
+}
+func (h *FilesHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	files := protected.Group("/files")
+	{
+		files.GET("", h.GetFiles)
+		files.DELETE("/*filepath", h.DeleteFile)
 	}
 }

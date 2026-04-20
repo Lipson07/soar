@@ -1,7 +1,36 @@
 .main {
   width: 100%;
   height: 100vh;
-  background-color: #333333;
+  background-color: var(--bg-primary);
   display: flex;
   flex-direction: row;
+  position: relative;
+}
+
+.emptyState {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--text-tertiary);
+  background: var(--bg-chat);
+
+  svg {
+    opacity: 0.4;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  p {
+    margin: 0;
+    font-size: var(--font-size-base);
+    color: var(--text-secondary);
+  }
 }
