@@ -165,9 +165,9 @@ func (s *chatService) GetUserChats(ctx context.Context, userID uuid.UUID) ([]*do
 		}
 
 		lastMessage, _ := s.messageRepo.GetLastMessage(ctx, chat.ID)
+
 		unreadCount, _ := s.participantRepo.GetUnreadCount(ctx, chat.ID, userID, p.LastReadAt)
 
-		// Для приватных чатов, если имя не установлено, получаем имя другого участника
 		if chat.Type == domain.ChatTypePrivate && (chat.Name == nil || *chat.Name == "") {
 			participantsInChat, _ := s.participantRepo.GetByChatID(ctx, chat.ID)
 			for _, part := range participantsInChat {

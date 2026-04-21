@@ -14,6 +14,14 @@ const (
 	MessageTypeFile  MessageType = "file"
 )
 
+type MessageStatus string
+
+const (
+	MessageStatusSent      MessageStatus = "sent"
+	MessageStatusDelivered MessageStatus = "delivered"
+	MessageStatusRead      MessageStatus = "read"
+)
+
 type Message struct {
 	ID        uuid.UUID   `json:"id" db:"id"`
 	ChatID    uuid.UUID   `json:"chat_id" db:"chat_id"`
@@ -60,4 +68,11 @@ type UploadFileResponse struct {
 	FileName string `json:"file_name"`
 	FileSize int64  `json:"file_size"`
 	MimeType string `json:"mime_type"`
+}
+
+type Reaction struct {
+	MessageID uuid.UUID `json:"message_id" db:"message_id"`
+	UserID    uuid.UUID `json:"user_id" db:"user_id"`
+	Emoji     string    `json:"emoji" db:"emoji"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }

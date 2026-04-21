@@ -77,3 +77,12 @@ type FileService interface {
 	GetFilesByChat(ctx context.Context, chatID uuid.UUID) ([]*domain.File, error)
 	DeleteFile(ctx context.Context, id uuid.UUID) error
 }
+type CallService interface {
+	StartCall(ctx context.Context, chatID uuid.UUID, callerID uuid.UUID, calleeID uuid.UUID, callType domain.CallType) (*domain.Call, error)
+	AcceptCall(ctx context.Context, callID uuid.UUID) (*domain.Call, error)
+	RejectCall(ctx context.Context, callID uuid.UUID) (*domain.Call, error)
+	EndCall(ctx context.Context, callID uuid.UUID) (*domain.Call, error)
+	GetCallByID(ctx context.Context, callID uuid.UUID) (*domain.Call, error)
+	GetActiveCall(ctx context.Context, chatID uuid.UUID) (*domain.Call, error)
+	GetUserCalls(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Call, error)
+}

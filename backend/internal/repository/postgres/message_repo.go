@@ -46,7 +46,7 @@ func (r *MessageRepository) GetByChatID(ctx context.Context, chatID uuid.UUID, l
 		SELECT id, chat_id, user_id, type, text, file_url, file_name, file_size, mime_type, reply_to, is_edited, created_at, updated_at, deleted_at
 		FROM messages
 		WHERE chat_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC
+		ORDER BY created_at ASC
 		LIMIT $2 OFFSET $3
 	`
 	var messages []*domain.Message
@@ -59,7 +59,7 @@ func (r *MessageRepository) Update(ctx context.Context, message *domain.Message)
 		UPDATE messages SET text = $1, is_edited = $2, updated_at = $3
 		WHERE id = $4 AND deleted_at IS NULL
 	`
-	_, err := r.db.ExecContext(ctx, query, message.Text, message.IsEdited, message.UpdatedAt, message.ID)
+	_, err := r.db.ExecContext(ctx, query, message.Text, true, message.UpdatedAt, message.ID)
 	return err
 }
 
@@ -68,7 +68,6 @@ func (r *MessageRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
 }
-
 func (r *MessageRepository) GetLastMessage(ctx context.Context, chatID uuid.UUID) (*domain.MessageInfo, error) {
 	query := `
 		SELECT id, type, text, file_url, file_name, user_id, created_at
@@ -79,8 +78,42 @@ func (r *MessageRepository) GetLastMessage(ctx context.Context, chatID uuid.UUID
 	`
 	var msg domain.MessageInfo
 	err := r.db.GetContext(ctx, &msg, query, chatID)
-	if err == sql.ErrNoRows {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if msg.ID == uuid.Nil {
 		return nil, nil
 	}
-	return &msg, err
+
+	return &msg, nil
+}
+func (r *MessageRepository) UpdateStatus(ctx context.Context, messageID uuid.UUID, status domain.MessageStatus) error {
+	return nil
+}
+
+func (r *MessageRepository) AddReaction(ctx context.Context, messageID, userID uuid.UUID, emoji string) error {
+	query := `
+		INSERT INTO reactions (message_id, user_id, emoji, created_at)
+		VALUES ($1, $2, $3, NOW())
+		ON CONFLICT (message_id, user_id, emoji) DO NOTHING
+	`
+	_, err := r.db.ExecContext(ctx, query, messageID, userID, emoji)
+	return err
+}
+
+func (r *MessageRepository) RemoveReaction(ctx context.Context, messageID, userID uuid.UUID, emoji string) error {
+	query := `DELETE FROM reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`
+	_, err := r.db.ExecContext(ctx, query, messageID, userID, emoji)
+	return err
+}
+
+func (r *MessageRepository) GetReactions(ctx context.Context, messageID uuid.UUID) ([]domain.Reaction, error) {
+	query := `SELECT message_id, user_id, emoji, created_at FROM reactions WHERE message_id = $1`
+	var reactions []domain.Reaction
+	err := r.db.SelectContext(ctx, &reactions, query, messageID)
+	return reactions, err
 }

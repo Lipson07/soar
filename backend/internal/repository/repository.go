@@ -78,3 +78,12 @@ type FileRepository interface {
 	GetByChatID(ctx context.Context, chatID uuid.UUID) ([]*domain.File, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 }
+type CallRepository interface {
+	Create(ctx context.Context, call *domain.Call) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Call, error)
+	GetByRoomID(ctx context.Context, roomID string) (*domain.Call, error)
+	GetActiveCall(ctx context.Context, chatID uuid.UUID) (*domain.Call, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.CallStatus) error
+	UpdateEnded(ctx context.Context, id uuid.UUID, endedAt time.Time) error
+	GetUserCalls(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Call, error)
+}

@@ -127,3 +127,14 @@ func (h *FilesHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 		files.DELETE("/*filepath", h.DeleteFile)
 	}
 }
+func (h *CallHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	calls := protected.Group("/calls")
+	{
+		calls.POST("", h.StartCall)
+		calls.GET("", h.GetUserCalls)
+		calls.GET("/active", h.GetActiveCall)
+		calls.POST("/:callId/accept", h.AcceptCall)
+		calls.POST("/:callId/reject", h.RejectCall)
+		calls.POST("/:callId/end", h.EndCall)
+	}
+}

@@ -4,7 +4,12 @@ interface Message {
   id: string;
   chat_id: string;
   user_id: string;
+  type: "text" | "image" | "file";
   text: string;
+  file_url?: string;
+  file_name?: string;
+  file_size?: number;
+  mime_type?: string;
   reply_to: string | null;
   is_edited: boolean;
   created_at: string;
@@ -77,10 +82,15 @@ const selectedChatSlice = createSlice({
     addMessage: (state, action: PayloadAction<Message>) => {
       state.messages.push(action.payload);
     },
-    updateMessage: (state, action: PayloadAction<Message>) => {
+    updateMessageText: (
+      state,
+      action: PayloadAction<{ id: string; text: string; is_edited: boolean }>,
+    ) => {
       const index = state.messages.findIndex((m) => m.id === action.payload.id);
       if (index !== -1) {
-        state.messages[index] = action.payload;
+        state.messages[index].text = action.payload.text;
+        state.messages[index].is_edited = action.payload.is_edited;
+        state.messages[index].updated_at = new Date().toISOString();
       }
     },
     deleteMessage: (state, action: PayloadAction<string>) => {
@@ -103,7 +113,7 @@ export const {
   toggleChat,
   setMessages,
   addMessage,
-  updateMessage,
+  updateMessageText,
   deleteMessage,
   setLoading,
   clearSelectedChat,

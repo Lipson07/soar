@@ -38,7 +38,7 @@ interface Chat {
   created_at: string;
   updated_at: string;
   last_message_at: string | null;
-  last_message?: {
+  last_message: {
     id: string;
     text: string;
     user_id: string;
@@ -47,7 +47,7 @@ interface Chat {
     file_name?: string;
     type?: string;
   } | null;
-  unread_count?: number;
+  unread_count: number;
   other_user_id?: string | null;
   other_user_name?: string | null;
 }
@@ -115,7 +115,6 @@ function ChatList() {
     }
   }, [fetchMyChats]);
 
-  // Периодическое обновление чатов
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -124,6 +123,17 @@ function ChatList() {
     }, 5000);
 
     return () => clearInterval(interval);
+  }, [currentUserId, fetchMyChats]);
+
+  useEffect(() => {
+    const handleMessageSent = () => {
+      if (currentUserId) {
+        fetchMyChats(currentUserId);
+      }
+    };
+
+    window.addEventListener("messageSent", handleMessageSent);
+    return () => window.removeEventListener("messageSent", handleMessageSent);
   }, [currentUserId, fetchMyChats]);
 
   const enrichPrivateChatNames = async (
@@ -239,48 +249,70 @@ function ChatList() {
     return chat.name || "Без названия";
   };
 
-  const getLastMessageText = (chat: Chat) => {
-    if (chat.last_message) {
-      const msg = chat.last_message;
-
-      // Если это файл или изображение
-      if (msg.type === "image") {
-        return "📷 Изображение";
-      }
-      if (msg.type === "file") {
-        return `📎 ${msg.file_name || "Файл"}`;
-      }
-
-      // Текстовое сообщение
-      if (msg.text) {
-        // Если сообщение от текущего пользователя
-        if (msg.user_id === currentUserId) {
-          return `Вы: ${msg.text}`;
-        }
-        return msg.text;
-      }
+  const getLastMessageText = (chat: Chat): string => {
+    if (!chat.last_message || !chat.last_message.id) {
+      return "Нет сообщений";
     }
+
+    const msg = chat.last_message;
+
+    if (msg.type === "image") {
+      return "📷 Изображение";
+    }
+    if (msg.type === "file") {
+      return `📎 ${msg.file_name || "Файл"}`;
+    }
+
+    if (msg.text) {
+      if (msg.user_id === currentUserId) {
+        return `Вы: ${msg.text}`;
+      }
+      return msg.text;
+    }
+
     return "Нет сообщений";
   };
 
-  const handleUserClick = (user: User) => {
-    const chat: Chat = {
-      id: user.id,
-      type: "private",
-      name: user.username,
-      creator_id: currentUserId || "",
-      avatar_url: user.avatar_url ?? null,
-      created_at: user.created_at || new Date().toISOString(),
-      updated_at: user.updated_at || new Date().toISOString(),
-      last_message_at: null,
-      unread_count: 0,
-      other_user_id: user.id,
-      other_user_name: user.username,
-    };
+  const handleUserClick = async (user: User) => {
+    const token = localStorage.getItem("token");
+    if (!token || !currentUserId) return;
 
-    dispatch(toggleChat(chat));
-    setIsSearchFocused(false);
-    dispatch(clearResults());
+    try {
+      const response = await fetch("http://localhost:8080/api/chats/private", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          user_id: user.id,
+        }),
+      });
+
+      if (response.ok) {
+        const chat = await response.json();
+
+        const enrichedChat: Chat = {
+          ...chat,
+          name: user.username,
+          other_user_id: user.id,
+          other_user_name: user.username,
+          avatar_url: user.avatar_url,
+          unread_count: 0,
+          last_message: null,
+        };
+
+        dispatch(toggleChat(enrichedChat));
+        setIsSearchFocused(false);
+        dispatch(clearResults());
+
+        fetchMyChats(currentUserId);
+      } else {
+        console.error("Ошибка создания чата");
+      }
+    } catch (error) {
+      console.error("Ошибка:", error);
+    }
   };
 
   const handleChatClick = (chat: Chat) => {
@@ -451,7 +483,7 @@ function ChatList() {
                   key={chat.id}
                   className={`${style.chatItem} ${
                     isChatActive(chat.id) ? style.active : ""
-                  } ${chat.unread_count && chat.unread_count > 0 ? style.unread : ""}`}
+                  } ${chat.unread_count > 0 ? style.unread : ""}`}
                   onClick={() => handleChatClick(chat)}
                 >
                   <div className={style.avatar}>{renderChatAvatar(chat)}</div>
@@ -463,12 +495,21 @@ function ChatList() {
                       </div>
                     </div>
                     <div className={style.messagePreview}>
-                      <div className={style.lastMessage}>
-                        {getLastMessageText(chat)}
-                      </div>
-                      {chat.unread_count && chat.unread_count > 0 && (
+                      {chat.last_message && chat.last_message.id ? (
+                        <div className={style.lastMessage}>
+                          {getLastMessageText(chat)}
+                        </div>
+                      ) : (
+                        <div
+                          className={style.lastMessage}
+                          style={{ opacity: 0.5 }}
+                        >
+                          Нет сообщений
+                        </div>
+                      )}
+                      {chat.unread_count > 0 && (
                         <div className={style.unreadBadge}>
-                          {chat.unread_count}
+                          {chat.unread_count > 99 ? "99+" : chat.unread_count}
                         </div>
                       )}
                     </div>

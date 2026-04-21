@@ -133,3 +133,31 @@
     color: var(--danger-color);
   }
 }
+.emojiWrapper {
+  position: relative;
+}
+
+.emojiPicker {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  z-index: 1000;
+
+  :global(.EmojiPickerReact) {
+    background: var(--bg-modal) !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: var(--shadow-modal) !important;
+
+    :global(.epr-emoji-category-label) {
+      background: var(--bg-modal) !important;
+      color: var(--text-primary) !important;
+    }
+
+    :global(.epr-search) {
+      background: var(--bg-input) !important;
+      border-color: var(--border-color) !important;
+      color: var(--text-primary) !important;
+    }
+  }
+}

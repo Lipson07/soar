@@ -60,17 +60,17 @@ func (r *ChatRepository) GetPrivateChatByUsers(ctx context.Context, user1ID, use
 
 func (r *ChatRepository) GetUserChats(ctx context.Context, userID uuid.UUID) ([]*domain.Chat, error) {
 	query := `
-		SELECT c.id, c.name, c.type, c.creator_id, c.avatar_url, c.created_at, c.updated_at, c.last_message_at
+		SELECT c.id, c.name, c.type, c.creator_id, c.avatar_url, 
+		       c.created_at, c.updated_at, c.last_message_at
 		FROM chats c
 		JOIN participants p ON p.chat_id = c.id
 		WHERE p.user_id = $1
-		ORDER BY c.updated_at DESC
+		ORDER BY c.last_message_at DESC NULLS LAST, c.updated_at DESC
 	`
 	var chats []*domain.Chat
 	err := r.db.SelectContext(ctx, &chats, query, userID)
 	return chats, err
 }
-
 func (r *ChatRepository) GetAll(ctx context.Context) ([]*domain.Chat, error) {
 	query := `SELECT id, name, type, creator_id, avatar_url, created_at, updated_at, last_message_at FROM chats ORDER BY created_at DESC`
 	var chats []*domain.Chat

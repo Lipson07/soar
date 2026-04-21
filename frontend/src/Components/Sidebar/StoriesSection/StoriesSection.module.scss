@@ -82,3 +82,19 @@
     transform: scale(1.05);
   }
 }
+.createStory {
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 5px;
+}
+.createChat {
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 5px;
+}

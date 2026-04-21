@@ -17,8 +17,8 @@
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--bg-avatar);
   display: flex;
@@ -27,6 +27,14 @@
   color: var(--text-tertiary);
   font-weight: 500;
   font-size: 16px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .userDetails {
@@ -46,10 +54,10 @@
   font-size: 12px;
   margin: 0;
   font-weight: 400;
-}
 
-.online {
-  color: var(--online-color);
+  &.online {
+    color: var(--online-color);
+  }
 }
 
 .actions {
@@ -77,23 +85,8 @@
   }
 }
 
-.searchButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary);
-  font-size: 18px;
-  transition: all 0.15s ease;
-
-  &:hover {
-    color: var(--text-primary);
-    background: var(--bg-hover);
-  }
+.menuWrapper {
+  position: relative;
 }
 
 .menuButton {
@@ -112,5 +105,176 @@
   &:hover {
     color: var(--text-primary);
     background: var(--bg-hover);
+  }
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: var(--bg-modal);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-modal);
+  padding: 4px;
+  min-width: 200px;
+  z-index: 1000;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+    text-align: left;
+
+    &:hover {
+      background: var(--bg-hover);
+    }
+
+    &.danger {
+      color: var(--danger-color);
+
+      &:hover {
+        background: rgba(255, 59, 48, 0.1);
+      }
+    }
+  }
+}
+
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchInput {
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  width: 200px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
+}
+
+.closeSearch {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+}
+.searchWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIconInside {
+  position: absolute;
+  left: 12px;
+  color: var(--text-tertiary);
+}
+
+.searchInput {
+  padding: 8px 12px 8px 36px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  width: 260px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary-color);
+  }
+
+  &::placeholder {
+    color: var(--text-placeholder);
+  }
+}
+
+.searchCounter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+
+  span {
+    min-width: 45px;
+    text-align: center;
+  }
+
+  button {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+  }
+}
+
+.closeSearch {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
   }
 }

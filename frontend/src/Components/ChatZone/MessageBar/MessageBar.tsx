@@ -9,6 +9,7 @@ import {
   setMessages,
 } from "../../../store/selectedChatSlice";
 import { selectUser, selectToken } from "../../../store/userSlice";
+import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 import style from "./MessageBar.module.scss";
 
 interface UploadedFile {
@@ -23,8 +24,11 @@ function MessageBar() {
   const [isSending, setIsSending] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const dispatch = useDispatch();
   const currentChat = useSelector(selectCurrentChat);
@@ -83,6 +87,12 @@ function MessageBar() {
 
   const clearUploadedFile = () => {
     setUploadedFile(null);
+  };
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    setMessage((prev) => prev + emojiData.emoji);
+    setShowEmojiPicker(false);
+    textareaRef.current?.focus();
   };
 
   const sendMessageToServer = async (text: string, fileData?: UploadedFile) => {
@@ -186,10 +196,12 @@ function MessageBar() {
     dispatch(addMessage(tempMessage));
     setMessage("");
     setUploadedFile(null);
+    setShowEmojiPicker(false);
 
     try {
       await sendMessageToServer(messageText, uploadedFile || undefined);
       await fetchMessages();
+      window.dispatchEvent(new CustomEvent("messageSent"));
     } catch (error) {
       console.error("Failed to send message:", error);
       setMessage(messageText);
@@ -275,12 +287,25 @@ function MessageBar() {
         >
           <IoMdAttach size={20} />
         </button>
-        <button className={style.attachButton} title="Эмодзи">
-          <BsEmojiSmile size={20} />
-        </button>
+        <div className={style.emojiWrapper}>
+          <button
+            ref={emojiButtonRef}
+            className={style.attachButton}
+            title="Эмодзи"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <BsEmojiSmile size={20} />
+          </button>
+          {showEmojiPicker && (
+            <div className={style.emojiPicker}>
+              <EmojiPicker onEmojiClick={handleEmojiClick} />
+            </div>
+          )}
+        </div>
       </div>
 
       <textarea
+        ref={textareaRef}
         className={style.messageInput}
         placeholder={
           uploadedFile

@@ -50,6 +50,7 @@
 .message {
   display: flex;
   margin-bottom: 2px;
+  transition: background 0.3s ease;
 
   &.own {
     justify-content: flex-end;
@@ -57,6 +58,11 @@
 
   &.other {
     justify-content: flex-start;
+  }
+
+  &.highlighted {
+    background: rgba(245, 166, 35, 0.2) !important;
+    border-radius: 8px;
   }
 }
 
@@ -76,6 +82,53 @@
     background: var(--bg-message-other);
     color: var(--text-primary);
     border-bottom-left-radius: 2px;
+  }
+
+  .menuButton {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0;
+    transition:
+      opacity 0.15s ease,
+      background 0.15s ease;
+
+    &:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+  }
+
+  &:hover .menuButton {
+    opacity: 1;
+  }
+
+  .reactionButton {
+    position: absolute;
+    bottom: -8px;
+    right: 8px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      background: var(--bg-hover);
+    }
+  }
+
+  &:hover .reactionButton {
+    opacity: 1;
   }
 }
 
@@ -230,6 +283,113 @@
 
     &:hover {
       background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+.contextMenu {
+  position: fixed;
+  background: var(--bg-modal);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-modal);
+  padding: 4px;
+  z-index: 1000;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--bg-hover);
+    }
+
+    &.deleteBtn {
+      color: var(--danger-color);
+
+      &:hover {
+        background: rgba(255, 59, 48, 0.1);
+      }
+    }
+  }
+}
+
+.emojiPickerWrapper {
+  position: absolute;
+  z-index: 1000;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+}
+
+.editMode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-panel);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+
+  .editInput {
+    width: 100%;
+    min-height: 60px;
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    font-family: inherit;
+    resize: vertical;
+
+    &:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+  }
+
+  .editActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+
+    button {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: var(--font-size-small);
+      cursor: pointer;
+      transition: all 0.15s ease;
+
+      &:first-child {
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+
+        &:hover {
+          background: var(--bg-hover);
+        }
+      }
+
+      &:last-child {
+        background: var(--primary-color);
+        border: none;
+        color: white;
+
+        &:hover {
+          opacity: 0.9;
+        }
+      }
     }
   }
 }

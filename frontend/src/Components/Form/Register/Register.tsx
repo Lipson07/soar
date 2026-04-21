@@ -26,8 +26,8 @@ const Register = () => {
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            bird.style.transform = "translateY(-30vh)";
-            cont.style.transform = "translateY(-30vh)";
+            bird.style.transform = "translateY(-25vh)";
+            cont.style.transform = "translateY(-25vh)";
           });
         });
       }
