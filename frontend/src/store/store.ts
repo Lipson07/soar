@@ -6,6 +6,7 @@ import modal from "./modalChatSlice";
 import search from "./searchSlice";
 import selectedChat from "./selectedChatSlice";
 import settings from "./settingSlice";
+import chat from "./chatSlice"; // Добавляем chatSlice
 
 const persistUserConfig = {
   key: "user",
@@ -35,6 +36,13 @@ const persistSettingsConfig = {
   ],
 };
 
+// Настройка persist для чатов - НЕ сохраняем в localStorage, чтобы всегда получать свежие данные
+const persistChatConfig = {
+  key: "chats",
+  storage,
+  whitelist: [], // Не сохраняем ничего, всегда получаем из API
+};
+
 const persistedUserReducer = persistReducer(persistUserConfig, user);
 const persistedSelectedChatReducer = persistReducer(
   persistSelectedChatConfig,
@@ -44,6 +52,7 @@ const persistedSettingsReducer = persistReducer(
   persistSettingsConfig,
   settings,
 );
+const persistedChatReducer = persistReducer(persistChatConfig, chat);
 
 export const store = configureStore({
   reducer: {
@@ -52,6 +61,7 @@ export const store = configureStore({
     search: search,
     selectedChat: persistedSelectedChatReducer,
     settings: persistedSettingsReducer,
+    chats: persistedChatReducer, // Добавляем chats в reducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -7,9 +7,10 @@ import {
   addMessage,
   selectCurrentChat,
   setMessages,
+  updateCurrentChatLastMessage,
 } from "../../../store/selectedChatSlice";
+import { updateChatLastMessage } from "../../../store/chatSlice";
 import { selectUser, selectToken } from "../../../store/userSlice";
-import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 import style from "./MessageBar.module.scss";
 
 interface UploadedFile {
@@ -24,11 +25,8 @@ function MessageBar() {
   const [isSending, setIsSending] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const emojiButtonRef = useRef<HTMLButtonElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const dispatch = useDispatch();
   const currentChat = useSelector(selectCurrentChat);
@@ -87,12 +85,6 @@ function MessageBar() {
 
   const clearUploadedFile = () => {
     setUploadedFile(null);
-  };
-
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    setMessage((prev) => prev + emojiData.emoji);
-    setShowEmojiPicker(false);
-    textareaRef.current?.focus();
   };
 
   const sendMessageToServer = async (text: string, fileData?: UploadedFile) => {
@@ -163,6 +155,17 @@ function MessageBar() {
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       );
       dispatch(setMessages(sortedMessages));
+
+      if (sortedMessages.length > 0) {
+        const lastMessage = sortedMessages[sortedMessages.length - 1];
+        dispatch(updateCurrentChatLastMessage({ lastMessage }));
+        dispatch(
+          updateChatLastMessage({
+            chatId: currentChat.id,
+            lastMessage: lastMessage,
+          }),
+        );
+      }
     }
   };
 
@@ -194,14 +197,21 @@ function MessageBar() {
     };
 
     dispatch(addMessage(tempMessage));
+
+    dispatch(updateCurrentChatLastMessage({ lastMessage: tempMessage }));
+    dispatch(
+      updateChatLastMessage({
+        chatId: currentChat.id,
+        lastMessage: tempMessage,
+      }),
+    );
+
     setMessage("");
     setUploadedFile(null);
-    setShowEmojiPicker(false);
 
     try {
       await sendMessageToServer(messageText, uploadedFile || undefined);
       await fetchMessages();
-      window.dispatchEvent(new CustomEvent("messageSent"));
     } catch (error) {
       console.error("Failed to send message:", error);
       setMessage(messageText);
@@ -287,25 +297,12 @@ function MessageBar() {
         >
           <IoMdAttach size={20} />
         </button>
-        <div className={style.emojiWrapper}>
-          <button
-            ref={emojiButtonRef}
-            className={style.attachButton}
-            title="Эмодзи"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          >
-            <BsEmojiSmile size={20} />
-          </button>
-          {showEmojiPicker && (
-            <div className={style.emojiPicker}>
-              <EmojiPicker onEmojiClick={handleEmojiClick} />
-            </div>
-          )}
-        </div>
+        <button className={style.attachButton} title="Эмодзи">
+          <BsEmojiSmile size={20} />
+        </button>
       </div>
 
       <textarea
-        ref={textareaRef}
         className={style.messageInput}
         placeholder={
           uploadedFile

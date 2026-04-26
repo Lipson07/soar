@@ -1,10 +1,10 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-interface Message {
+export interface Message {
   id: string;
   chat_id: string;
   user_id: string;
-  type: "text" | "image" | "file";
+  type?: "text" | "image" | "file";
   text: string;
   file_url?: string;
   file_name?: string;
@@ -17,7 +17,7 @@ interface Message {
   deleted_at: string | null;
 }
 
-interface Chat {
+export interface Chat {
   id: string;
   type: string;
   name: string | null;
@@ -26,12 +26,15 @@ interface Chat {
   created_at: string;
   updated_at: string;
   last_message_at: string | null;
-  unread_count: number;
+  unread_count?: number;
   last_message?: {
     id: string;
     text: string;
     user_id: string;
     created_at: string;
+    type?: string;
+    file_url?: string;
+    file_name?: string;
   } | null;
   other_user_id?: string | null;
   other_user_name?: string | null;
@@ -82,15 +85,10 @@ const selectedChatSlice = createSlice({
     addMessage: (state, action: PayloadAction<Message>) => {
       state.messages.push(action.payload);
     },
-    updateMessageText: (
-      state,
-      action: PayloadAction<{ id: string; text: string; is_edited: boolean }>,
-    ) => {
+    updateMessage: (state, action: PayloadAction<Message>) => {
       const index = state.messages.findIndex((m) => m.id === action.payload.id);
       if (index !== -1) {
-        state.messages[index].text = action.payload.text;
-        state.messages[index].is_edited = action.payload.is_edited;
-        state.messages[index].updated_at = new Date().toISOString();
+        state.messages[index] = action.payload;
       }
     },
     deleteMessage: (state, action: PayloadAction<string>) => {
@@ -104,6 +102,24 @@ const selectedChatSlice = createSlice({
       state.messages = [];
       state.isOpen = false;
     },
+    updateCurrentChatLastMessage: (
+      state,
+      action: PayloadAction<{ lastMessage: Message }>,
+    ) => {
+      if (state.currentChat) {
+        state.currentChat.last_message = {
+          id: action.payload.lastMessage.id,
+          text: action.payload.lastMessage.text,
+          user_id: action.payload.lastMessage.user_id,
+          created_at: action.payload.lastMessage.created_at,
+          type: action.payload.lastMessage.type,
+          file_url: action.payload.lastMessage.file_url,
+          file_name: action.payload.lastMessage.file_name,
+        };
+        state.currentChat.last_message_at =
+          action.payload.lastMessage.created_at;
+      }
+    },
   },
 });
 
@@ -113,12 +129,14 @@ export const {
   toggleChat,
   setMessages,
   addMessage,
-  updateMessageText,
+  updateMessage,
   deleteMessage,
   setLoading,
   clearSelectedChat,
+  updateCurrentChatLastMessage,
 } = selectedChatSlice.actions;
 
+// Селекторы с правильными типами
 export const selectCurrentChat = (state: { selectedChat: SelectedChatState }) =>
   state.selectedChat.currentChat;
 

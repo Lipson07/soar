@@ -5,13 +5,11 @@ import {
   selectCurrentChat,
   setMessages,
   setLoading,
-  deleteMessage,
-  updateMessageText,
+  updateCurrentChatLastMessage,
 } from "../../../store/selectedChatSlice";
+import { updateChatLastMessage } from "../../../store/chatSlice";
 import { selectUser, selectToken } from "../../../store/userSlice";
-import { BsFileEarmark, BsDownload, BsThreeDotsVertical } from "react-icons/bs";
-import { FiEdit2, FiTrash2, FiCopy } from "react-icons/fi";
-import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
+import { BsFileEarmark, BsDownload } from "react-icons/bs";
 import style from "./MessageList.module.scss";
 
 interface Message {
@@ -38,37 +36,31 @@ function MessageList() {
   const token = useSelector(selectToken);
   const dispatch = useDispatch();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{
-    message: Message;
-    x: number;
-    y: number;
-  } | null>(null);
-  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [editText, setEditText] = useState("");
-  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
-  const [reactionMessageId, setReactionMessageId] = useState<string | null>(
-    null,
-  );
 
   const isFetchingRef = useRef(false);
+  const lastChatIdRef = useRef<string | null>(null);
 
   const getToken = useCallback(() => {
     return token || localStorage.getItem("token");
   }, [token]);
 
   const fetchMessages = useCallback(async () => {
-    if (!currentChat || isFetchingRef.current) return;
+    if (!currentChat) return;
+    if (isFetchingRef.current) return;
+
+    // Если это тот же чат, не перезагружаем
+    if (lastChatIdRef.current === currentChat.id && messages.length > 0) {
+      return;
+    }
 
     isFetchingRef.current = true;
-    setIsLoadingMessages(true);
     dispatch(setLoading(true));
 
     const authToken = getToken();
 
     if (!authToken) {
-      setIsLoadingMessages(false);
+      console.error("Токен не найден");
       dispatch(setLoading(false));
       isFetchingRef.current = false;
       return;
@@ -98,39 +90,45 @@ function MessageList() {
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
         );
         dispatch(setMessages(sortedMessages));
+
+        // Обновляем последнее сообщение
+        if (sortedMessages.length > 0) {
+          const lastMessage = sortedMessages[sortedMessages.length - 1];
+          dispatch(updateCurrentChatLastMessage({ lastMessage }));
+          dispatch(
+            updateChatLastMessage({
+              chatId: currentChat.id,
+              lastMessage: lastMessage,
+            }),
+          );
+        }
+
+        lastChatIdRef.current = currentChat.id;
+      } else {
+        console.error("Ошибка загрузки сообщений:", response.status);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
-      setIsLoadingMessages(false);
       dispatch(setLoading(false));
       isFetchingRef.current = false;
     }
-  }, [currentChat, getToken, dispatch]);
+  }, [currentChat, getToken, dispatch, messages.length]);
 
+  // Загружаем сообщения только при смене чата
   useEffect(() => {
     if (currentChat) {
+      // Сбрасываем флаги при смене чата
+      isFetchingRef.current = false;
       fetchMessages();
     }
+
     return () => {
+      // Очищаем сообщения при закрытии чата
       dispatch(setMessages([]));
     };
-  }, [currentChat?.id, fetchMessages, dispatch]);
-
-  useEffect(() => {
-    if (!currentChat) return;
-    const interval = setInterval(() => fetchMessages(), 5000);
-    return () => clearInterval(interval);
-  }, [currentChat?.id, fetchMessages]);
-
-  useEffect(() => {
-    const handleClick = () => {
-      setContextMenu(null);
-      setShowEmojiPicker(null);
-    };
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentChat?.id]); // Только при изменении ID чата
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -140,112 +138,9 @@ function MessageList() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  const handleContextMenu = (e: React.MouseEvent, message: Message) => {
-    e.preventDefault();
-    if (message.user_id === currentUser?.id) {
-      setContextMenu({
-        message,
-        x: e.clientX,
-        y: e.clientY,
-      });
-    }
-  };
-
-  const handleEdit = () => {
-    if (contextMenu) {
-      setEditingMessage(contextMenu.message);
-      setEditText(contextMenu.message.text);
-      setContextMenu(null);
-    }
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingMessage || !editText.trim()) return;
-
-    const authToken = getToken();
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/messages?message_id=${editingMessage.id}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ text: editText.trim() }),
-        },
-      );
-
-      if (response.ok) {
-        dispatch(
-          updateMessageText({
-            id: editingMessage.id,
-            text: editText.trim(),
-            is_edited: true,
-          }),
-        );
-        setEditingMessage(null);
-        setEditText("");
-      }
-    } catch (error) {
-      console.error("Failed to edit message:", error);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!contextMenu) return;
-
-    const authToken = getToken();
-    try {
-      const response = await fetch(
-        `http://localhost:8080/api/messages?message_id=${contextMenu.message.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        },
-      );
-
-      if (response.ok) {
-        dispatch(deleteMessage(contextMenu.message.id));
-      }
-    } catch (error) {
-      console.error("Failed to delete message:", error);
-    }
-    setContextMenu(null);
-  };
-
-  const handleCopy = () => {
-    if (contextMenu) {
-      navigator.clipboard?.writeText(contextMenu.message.text);
-      setContextMenu(null);
-    }
-  };
-
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    if (reactionMessageId) {
-      console.log(
-        "Add reaction:",
-        emojiData.emoji,
-        "to message:",
-        reactionMessageId,
-      );
-      setReactionMessageId(null);
-      setShowEmojiPicker(null);
-    }
-  };
-
-  const handleReaction = (messageId: string) => {
-    setReactionMessageId(messageId);
-    setShowEmojiPicker(messageId);
-  };
-
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   const formatDate = (timestamp: string) => {
@@ -254,9 +149,13 @@ function MessageList() {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) return "Сегодня";
-    if (date.toDateString() === yesterday.toDateString()) return "Вчера";
-    return date.toLocaleDateString();
+    if (date.toDateString() === today.toDateString()) {
+      return "Сегодня";
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return "Вчера";
+    } else {
+      return date.toLocaleDateString();
+    }
   };
 
   const formatFileSize = (bytes?: number): string => {
@@ -268,11 +167,15 @@ function MessageList() {
 
   const groupMessagesByDate = () => {
     const groups: { [key: string]: Message[] } = {};
+
     messages.forEach((message) => {
       const date = formatDate(message.created_at);
-      if (!groups[date]) groups[date] = [];
+      if (!groups[date]) {
+        groups[date] = [];
+      }
       groups[date].push(message);
     });
+
     return groups;
   };
 
@@ -294,6 +197,7 @@ function MessageList() {
             )}
           </div>
         );
+
       case "file":
         return (
           <div className={style.fileMessage}>
@@ -318,10 +222,14 @@ function MessageList() {
             )}
           </div>
         );
+
       default:
         return <p className={style.messageText}>{message.text}</p>;
     }
   };
+
+  // Проверяем загрузку
+  const isLoading = useSelector((state: any) => state.selectedChat.isLoading);
 
   if (!currentChat) {
     return (
@@ -331,7 +239,7 @@ function MessageList() {
     );
   }
 
-  if (isLoadingMessages && messages.length === 0) {
+  if (isLoading && messages.length === 0) {
     return (
       <div className={style.emptyState}>
         <div className={style.spinner}></div>
@@ -355,61 +263,17 @@ function MessageList() {
                 const isOwn = message.user_id === currentUser?.id;
 
                 return (
-                  <div key={message.id}>
-                    {editingMessage?.id === message.id ? (
-                      <div className={style.editMode}>
-                        <textarea
-                          className={style.editInput}
-                          value={editText}
-                          onChange={(e) => setEditText(e.target.value)}
-                          autoFocus
-                        />
-                        <div className={style.editActions}>
-                          <button onClick={() => setEditingMessage(null)}>
-                            Отмена
-                          </button>
-                          <button onClick={handleSaveEdit}>Сохранить</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        id={`message-${message.id}`}
-                        className={`${style.message} ${isOwn ? style.own : style.other}`}
-                        onContextMenu={(e) => handleContextMenu(e, message)}
-                      >
-                        <div className={style.messageBubble}>
-                          {isOwn && (
-                            <button
-                              className={style.menuButton}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleContextMenu(e, message);
-                              }}
-                            >
-                              <BsThreeDotsVertical size={14} />
-                            </button>
-                          )}
-                          {renderMessageContent(message)}
-                          <span className={style.timestamp}>
-                            {formatTime(message.created_at)}
-                            {message.is_edited && " (ред.)"}
-                          </span>
-                          {!isOwn && (
-                            <button
-                              className={style.reactionButton}
-                              onClick={() => handleReaction(message.id)}
-                            >
-                              😊
-                            </button>
-                          )}
-                        </div>
-                        {showEmojiPicker === message.id && (
-                          <div className={style.emojiPickerWrapper}>
-                            <EmojiPicker onEmojiClick={handleEmojiClick} />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                  <div
+                    key={message.id}
+                    className={`${style.message} ${isOwn ? style.own : style.other}`}
+                  >
+                    <div className={style.messageBubble}>
+                      {renderMessageContent(message)}
+                      <span className={style.timestamp}>
+                        {formatTime(message.created_at)}
+                        {message.is_edited && " (ред.)"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -418,26 +282,6 @@ function MessageList() {
           <div ref={messagesEndRef} />
         </div>
       </div>
-
-      {contextMenu && (
-        <div
-          className={style.contextMenu}
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-        >
-          <button onClick={handleEdit}>
-            <FiEdit2 size={16} />
-            Редактировать
-          </button>
-          <button onClick={handleCopy}>
-            <FiCopy size={16} />
-            Копировать
-          </button>
-          <button onClick={handleDelete} className={style.deleteBtn}>
-            <FiTrash2 size={16} />
-            Удалить
-          </button>
-        </div>
-      )}
 
       {lightboxImage && (
         <div className={style.lightbox} onClick={() => setLightboxImage(null)}>
