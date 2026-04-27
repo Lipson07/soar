@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { selectUser, updateUser, logout } from "../../../store/userSlice";
 import style from "./Profile.module.scss";
 
@@ -10,6 +11,7 @@ interface ProfileProps {
 
 function Profile({ isOpen, onClose }: ProfileProps) {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector(selectUser);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -43,6 +45,7 @@ function Profile({ isOpen, onClose }: ProfileProps) {
   const handleLogout = () => {
     dispatch(logout());
     onClose();
+    navigate("/login");
   };
 
   const handleEditClick = () => {
@@ -108,50 +111,40 @@ function Profile({ isOpen, onClose }: ProfileProps) {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Файл слишком большой. Максимальный размер 5MB");
+      return;
+    }
+
     setAvatarLoading(true);
     setError(null);
 
     try {
       const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("avatar", file);
 
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Avatar = reader.result as string;
+      const response = await fetch(
+        `http://localhost:8080/api/users/${user.id}/avatar`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        },
+      );
 
-        try {
-          const response = await fetch(
-            `http://localhost:8080/api/users/${user.id}`,
-            {
-              method: "PUT",
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                username: user.username,
-                email: user.email,
-                avatar_url: base64Avatar,
-              }),
-            },
-          );
-
-          if (response.ok) {
-            const updatedUser = await response.json();
-            dispatch(updateUser(updatedUser));
-          } else {
-            const data = await response.json();
-            setError(data.error || "Ошибка при загрузке аватара");
-          }
-        } catch (err) {
-          setError("Ошибка соединения с сервером");
-        } finally {
-          setAvatarLoading(false);
-        }
-      };
-
-      reader.readAsDataURL(file);
+      if (response.ok) {
+        const updatedUser = await response.json();
+        dispatch(updateUser(updatedUser));
+      } else {
+        const data = await response.json();
+        setError(data.error || "Ошибка при загрузке аватара");
+      }
     } catch (err) {
-      setError("Ошибка при чтении файла");
+      setError("Ошибка соединения с сервером");
+    } finally {
       setAvatarLoading(false);
     }
   };

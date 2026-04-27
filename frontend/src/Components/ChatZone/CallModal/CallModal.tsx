@@ -8,7 +8,6 @@ import {
   FiPhone,
   FiX,
   FiAlertCircle,
-  FiUser,
 } from "react-icons/fi";
 
 interface CallModalProps {
@@ -68,27 +67,6 @@ function CallModal({
   const getAvatarLetter = (name: string) => {
     if (!name) return "?";
     return name.charAt(0).toUpperCase();
-  };
-
-  const getAvatarColor = (name: string) => {
-    const colors = [
-      "#667eea",
-      "#764ba2",
-      "#f093fb",
-      "#f5576c",
-      "#4facfe",
-      "#00f2fe",
-      "#43e97b",
-      "#38f9d7",
-      "#fa709a",
-      "#fee140",
-      "#ff6a88",
-      "#ff99ac",
-    ];
-    const index = name
-      .split("")
-      .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[index % colors.length];
   };
 
   useEffect(() => {
@@ -385,15 +363,12 @@ function CallModal({
   return (
     <div className={style.overlay}>
       <div className={style.callModal}>
-        {/* Фон с размытием */}
         <div className={style.background}>
           <div className={style.bgGradient} />
           <div className={style.bgPattern} />
         </div>
 
-        {/* Контент */}
         <div className={style.content}>
-          {/* Аватар и информация */}
           <div className={style.callerSection}>
             <div className={style.avatarWrapper}>
               {caller.avatar_url ? (
@@ -403,10 +378,7 @@ function CallModal({
                   className={style.avatar}
                 />
               ) : (
-                <div
-                  className={style.avatarPlaceholder}
-                  style={{ background: getAvatarColor(caller.username) }}
-                >
+                <div className={style.avatarPlaceholder}>
                   <span>{getAvatarLetter(caller.username)}</span>
                 </div>
               )}
@@ -435,7 +407,6 @@ function CallModal({
             </div>
           </div>
 
-          {/* Видео */}
           {type === "video" && callStatus !== "error" && (
             <>
               <div className={style.remoteVideo}>
@@ -447,7 +418,6 @@ function CallModal({
             </>
           )}
 
-          {/* Ошибка */}
           {callStatus === "error" && (
             <div className={style.errorBlock}>
               <FiAlertCircle size={48} />
@@ -455,7 +425,6 @@ function CallModal({
             </div>
           )}
 
-          {/* Кнопки управления */}
           <div className={style.controls}>
             {callStatus === "connecting" &&
             isIncoming &&

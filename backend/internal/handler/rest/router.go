@@ -66,6 +66,7 @@ func (h *UserHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 		users.GET("/:id", h.GetUser)
 		users.PUT("/:id", h.UpdateUser)
 		users.DELETE("/:id", h.DeleteUser)
+		users.PUT("/:id/status", h.UpdateStatus)
 		users.PUT("/profile/status", h.UpdateStatus)
 	}
 }
@@ -136,5 +137,13 @@ func (h *CallHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
 		calls.POST("/:callId/accept", h.AcceptCall)
 		calls.POST("/:callId/reject", h.RejectCall)
 		calls.POST("/:callId/end", h.EndCall)
+	}
+}
+func (h *StoryHandler) RegisterRoutes(public, protected *gin.RouterGroup) {
+	stories := protected.Group("/stories")
+	{
+		stories.POST("/upload", h.UploadStory)
+		stories.GET("", h.GetStories)
+		stories.POST("/:id/view", h.MarkAsViewed)
 	}
 }

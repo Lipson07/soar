@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"sync"
 
 	"backend/internal/domain"
 	"backend/internal/service"
@@ -21,15 +20,6 @@ var upgrader = websocket.Upgrader{
 	},
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-}
-
-type Client struct {
-	ID    uuid.UUID
-	Conn  *websocket.Conn
-	Send  chan []byte
-	Hub   *Hub
-	Rooms map[string]bool
-	mu    sync.RWMutex
 }
 
 type WebSocketHandler struct {
@@ -77,6 +67,15 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 
 	h.hub.Register <- client
 
+	h.userService.UpdateStatus(context.Background(), userID, "online")
+
+	statusData, _ := json.Marshal(map[string]interface{}{
+		"type":    "user-status",
+		"user_id": userID.String(),
+		"status":  "online",
+	})
+	h.hub.BroadcastToAll(statusData, userID)
+
 	go h.writePump(client)
 	go h.readPump(client)
 }
@@ -85,21 +84,76 @@ func (h *WebSocketHandler) readPump(client *Client) {
 	defer func() {
 		h.hub.Unregister <- client
 		client.Conn.Close()
+
+		h.userService.UpdateStatus(context.Background(), client.ID, "offline")
+
+		statusData, _ := json.Marshal(map[string]interface{}{
+			"type":    "user-status",
+			"user_id": client.ID.String(),
+			"status":  "offline",
+		})
+		h.hub.BroadcastToAll(statusData, client.ID)
 	}()
 
 	for {
 		_, message, err := client.Conn.ReadMessage()
 		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("WebSocket error: %v", err)
+			}
 			break
 		}
 
-		var signal domain.CallSignal
-		if err := json.Unmarshal(message, &signal); err != nil {
+		log.Printf("Received from %s: %s", client.ID, string(message))
+
+		var baseSignal struct {
+			Type string `json:"type"`
+		}
+		if err := json.Unmarshal(message, &baseSignal); err != nil {
+			log.Printf("Failed to parse message type: %v", err)
 			continue
 		}
 
-		signal.FromID = client.ID
-		h.handleSignal(client, &signal)
+		switch baseSignal.Type {
+		case "user-status":
+			var statusSignal struct {
+				Type   string `json:"type"`
+				UserID string `json:"user_id"`
+				Status string `json:"status"`
+			}
+			if err := json.Unmarshal(message, &statusSignal); err != nil {
+				log.Printf("Failed to parse user-status: %v", err)
+				continue
+			}
+			h.handleStatusSignal(client, &statusSignal)
+
+		case "typing":
+			var typingSignal struct {
+				Type     string `json:"type"`
+				UserID   string `json:"user_id"`
+				ChatID   string `json:"chat_id"`
+				IsTyping bool   `json:"is_typing"`
+				Username string `json:"username"`
+			}
+			if err := json.Unmarshal(message, &typingSignal); err != nil {
+				log.Printf("Failed to parse typing: %v", err)
+				continue
+			}
+			log.Printf("Typing from %s: %+v", client.ID, typingSignal)
+			h.handleTypingSignal(client, &typingSignal)
+
+		case "call-start", "call-accept", "call-reject", "call-end", "offer", "answer", "ice-candidate":
+			var signal domain.CallSignal
+			if err := json.Unmarshal(message, &signal); err != nil {
+				log.Printf("Failed to parse call signal: %v", err)
+				continue
+			}
+			signal.FromID = client.ID
+			h.handleCallSignal(client, &signal)
+
+		default:
+			log.Printf("Unknown message type: %s", baseSignal.Type)
+		}
 	}
 }
 
@@ -110,6 +164,7 @@ func (h *WebSocketHandler) writePump(client *Client) {
 		select {
 		case message, ok := <-client.Send:
 			if !ok {
+				client.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
 			if err := client.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
@@ -119,7 +174,42 @@ func (h *WebSocketHandler) writePump(client *Client) {
 	}
 }
 
-func (h *WebSocketHandler) handleSignal(client *Client, signal *domain.CallSignal) {
+func (h *WebSocketHandler) handleStatusSignal(client *Client, signal *struct {
+	Type   string `json:"type"`
+	UserID string `json:"user_id"`
+	Status string `json:"status"`
+}) {
+	userID, _ := uuid.Parse(signal.UserID)
+	h.userService.UpdateStatus(context.Background(), userID, signal.Status)
+
+	data, _ := json.Marshal(map[string]interface{}{
+		"type":    "user-status",
+		"user_id": signal.UserID,
+		"status":  signal.Status,
+	})
+	h.hub.BroadcastToAll(data, userID)
+}
+
+func (h *WebSocketHandler) handleTypingSignal(client *Client, signal *struct {
+	Type     string `json:"type"`
+	UserID   string `json:"user_id"`
+	ChatID   string `json:"chat_id"`
+	IsTyping bool   `json:"is_typing"`
+	Username string `json:"username"`
+}) {
+	data, _ := json.Marshal(map[string]interface{}{
+		"type":      "typing",
+		"user_id":   signal.UserID,
+		"chat_id":   signal.ChatID,
+		"is_typing": signal.IsTyping,
+		"username":  signal.Username,
+	})
+
+	log.Printf("Broadcasting typing: %s", string(data))
+	h.hub.BroadcastToAll(data, client.ID)
+}
+
+func (h *WebSocketHandler) handleCallSignal(client *Client, signal *domain.CallSignal) {
 	switch signal.Type {
 	case "call-start":
 		h.handleCallStart(client, signal)
@@ -145,7 +235,7 @@ func (h *WebSocketHandler) handleCallStart(client *Client, signal *domain.CallSi
 		return
 	}
 
-	h.joinRoom(client, call.RoomID)
+	client.JoinRoom(call.RoomID)
 
 	signal.RoomID = call.RoomID
 	signal.Call = &domain.CallResponse{
@@ -168,11 +258,7 @@ func (h *WebSocketHandler) handleCallStart(client *Client, signal *domain.CallSi
 	}
 
 	data, _ := json.Marshal(signal)
-	h.hub.mu.RLock()
-	if callee, ok := h.hub.Clients[call.CalleeID]; ok {
-		callee.Send <- data
-	}
-	h.hub.mu.RUnlock()
+	h.hub.SendToUser(call.CalleeID, data)
 }
 
 func (h *WebSocketHandler) handleCallAccept(client *Client, signal *domain.CallSignal) {
@@ -181,16 +267,11 @@ func (h *WebSocketHandler) handleCallAccept(client *Client, signal *domain.CallS
 		return
 	}
 
-	h.joinRoom(client, call.RoomID)
+	client.JoinRoom(call.RoomID)
 
 	signal.RoomID = call.RoomID
 	data, _ := json.Marshal(signal)
-
-	h.hub.mu.RLock()
-	if caller, ok := h.hub.Clients[call.CallerID]; ok {
-		caller.Send <- data
-	}
-	h.hub.mu.RUnlock()
+	h.hub.SendToUser(call.CallerID, data)
 }
 
 func (h *WebSocketHandler) handleCallReject(client *Client, signal *domain.CallSignal) {
@@ -199,14 +280,8 @@ func (h *WebSocketHandler) handleCallReject(client *Client, signal *domain.CallS
 		return
 	}
 
-	signal.RoomID = call.RoomID
 	data, _ := json.Marshal(signal)
-
-	h.hub.mu.RLock()
-	if caller, ok := h.hub.Clients[call.CallerID]; ok {
-		caller.Send <- data
-	}
-	h.hub.mu.RUnlock()
+	h.hub.SendToUser(call.CallerID, data)
 }
 
 func (h *WebSocketHandler) handleCallEnd(client *Client, signal *domain.CallSignal) {
@@ -215,9 +290,8 @@ func (h *WebSocketHandler) handleCallEnd(client *Client, signal *domain.CallSign
 		return
 	}
 
-	h.leaveRoom(client, call.RoomID)
+	client.LeaveRoom(call.RoomID)
 
-	signal.RoomID = call.RoomID
 	data, _ := json.Marshal(signal)
 	h.hub.Broadcast <- &Message{
 		RoomID: call.RoomID,
@@ -227,47 +301,12 @@ func (h *WebSocketHandler) handleCallEnd(client *Client, signal *domain.CallSign
 }
 
 func (h *WebSocketHandler) handleWebRTCSignal(client *Client, signal *domain.CallSignal) {
-	h.joinRoom(client, signal.RoomID)
+	client.JoinRoom(signal.RoomID)
 
 	data, _ := json.Marshal(signal)
 	h.hub.Broadcast <- &Message{
 		RoomID: signal.RoomID,
 		Data:   data,
 		FromID: client.ID,
-	}
-}
-
-func (h *WebSocketHandler) joinRoom(client *Client, roomID string) {
-	client.mu.Lock()
-	defer client.mu.Unlock()
-
-	if client.Rooms == nil {
-		client.Rooms = make(map[string]bool)
-	}
-	client.Rooms[roomID] = true
-
-	h.hub.mu.Lock()
-	defer h.hub.mu.Unlock()
-
-	if h.hub.Rooms[roomID] == nil {
-		h.hub.Rooms[roomID] = make(map[uuid.UUID]*Client)
-	}
-	h.hub.Rooms[roomID][client.ID] = client
-}
-
-func (h *WebSocketHandler) leaveRoom(client *Client, roomID string) {
-	client.mu.Lock()
-	defer client.mu.Unlock()
-
-	delete(client.Rooms, roomID)
-
-	h.hub.mu.Lock()
-	defer h.hub.mu.Unlock()
-
-	if room, ok := h.hub.Rooms[roomID]; ok {
-		delete(room, client.ID)
-		if len(room) == 0 {
-			delete(h.hub.Rooms, roomID)
-		}
 	}
 }

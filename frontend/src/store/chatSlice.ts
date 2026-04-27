@@ -1,6 +1,17 @@
+// store/chatSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export interface Chat {
+interface LastMessage {
+  id: string;
+  text: string;
+  user_id: string;
+  created_at: string;
+  type?: string;
+  file_url?: string;
+  file_name?: string;
+}
+
+interface Chat {
   id: string;
   type: string;
   name: string | null;
@@ -9,28 +20,22 @@ export interface Chat {
   created_at: string;
   updated_at: string;
   last_message_at: string | null;
-  last_message?: {
-    id: string;
-    text: string;
-    user_id: string;
-    created_at: string;
-    type?: string;
-    file_url?: string;
-    file_name?: string;
-  } | null;
+  last_message?: LastMessage | null;
   unread_count?: number;
   other_user_id?: string | null;
   other_user_name?: string | null;
 }
 
-interface ChatState {
+interface ChatsState {
   chats: Chat[];
   loading: boolean;
+  error: string | null;
 }
 
-const initialState: ChatState = {
+const initialState: ChatsState = {
   chats: [],
   loading: false,
+  error: null,
 };
 
 const chatSlice = createSlice({
@@ -39,60 +44,78 @@ const chatSlice = createSlice({
   reducers: {
     setChats: (state, action: PayloadAction<Chat[]>) => {
       state.chats = action.payload;
-      state.loading = false;
-    },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
-    },
-    updateChatLastMessage: (
-      state,
-      action: PayloadAction<{ chatId: string; lastMessage: any }>,
-    ) => {
-      const { chatId, lastMessage } = action.payload;
-      const chatIndex = state.chats.findIndex((chat) => chat.id === chatId);
-
-      if (chatIndex !== -1) {
-        state.chats[chatIndex].last_message = {
-          id: lastMessage.id,
-          text: lastMessage.text,
-          user_id: lastMessage.user_id,
-          created_at: lastMessage.created_at,
-          type: lastMessage.type,
-          file_url: lastMessage.file_url,
-          file_name: lastMessage.file_name,
-        };
-        state.chats[chatIndex].last_message_at = lastMessage.created_at;
-      }
     },
     addChat: (state, action: PayloadAction<Chat>) => {
-      // Проверяем, нет ли уже такого чата
-      const exists = state.chats.some((chat) => chat.id === action.payload.id);
+      const exists = state.chats.find((c) => c.id === action.payload.id);
       if (!exists) {
         state.chats.unshift(action.payload);
       }
     },
-    removeChat: (state, action: PayloadAction<string>) => {
-      state.chats = state.chats.filter((chat) => chat.id !== action.payload);
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.loading = action.payload;
     },
-    clearChats: (state) => {
-      state.chats = [];
-      state.loading = false;
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+    },
+    updateChatLastMessage: (
+      state,
+      action: PayloadAction<{
+        chatId: string;
+        lastMessage: LastMessage;
+      }>,
+    ) => {
+      const { chatId, lastMessage } = action.payload;
+      const chatIndex = state.chats.findIndex((c) => c.id === chatId);
+      if (chatIndex !== -1) {
+        const chat = state.chats[chatIndex];
+        chat.last_message = lastMessage;
+        chat.last_message_at = lastMessage.created_at;
+        // Перемещаем чат вверх списка
+        state.chats.splice(chatIndex, 1);
+        state.chats.unshift(chat);
+      }
+    },
+    incrementUnread: (state, action: PayloadAction<{ chatId: string }>) => {
+      const chat = state.chats.find((c) => c.id === action.payload.chatId);
+      if (chat) {
+        chat.unread_count = (chat.unread_count || 0) + 1;
+        // Перемещаем чат вверх
+        const chatIndex = state.chats.findIndex(
+          (c) => c.id === action.payload.chatId,
+        );
+        if (chatIndex > 0) {
+          state.chats.splice(chatIndex, 1);
+          state.chats.unshift(chat);
+        }
+      }
+    },
+    resetUnread: (state, action: PayloadAction<{ chatId: string }>) => {
+      const chat = state.chats.find((c) => c.id === action.payload.chatId);
+      if (chat) {
+        chat.unread_count = 0;
+      }
+    },
+    removeChat: (state, action: PayloadAction<string>) => {
+      state.chats = state.chats.filter((c) => c.id !== action.payload);
     },
   },
 });
 
 export const {
   setChats,
-  setLoading,
-  updateChatLastMessage,
   addChat,
+  setLoading,
+  setError,
+  updateChatLastMessage,
+  incrementUnread,
+  resetUnread,
   removeChat,
-  clearChats,
 } = chatSlice.actions;
 
-// Селекторы с правильными типами для RootState
-export const selectChats = (state: { chats: ChatState }) => state.chats.chats;
-export const selectChatsLoading = (state: { chats: ChatState }) =>
+export const selectChats = (state: { chats: ChatsState }) => state.chats.chats;
+export const selectChatsLoading = (state: { chats: ChatsState }) =>
   state.chats.loading;
+export const selectChatsError = (state: { chats: ChatsState }) =>
+  state.chats.error;
 
 export default chatSlice.reducer;

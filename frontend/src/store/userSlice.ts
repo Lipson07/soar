@@ -1,4 +1,3 @@
-// userSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 interface User {
@@ -30,7 +29,7 @@ const loadInitialState = (): UserState => {
     if (token && userStr) {
       const user = JSON.parse(userStr);
       return {
-        user,
+        user: { ...user, status: "online" },
         token,
         isAuthenticated: true,
         loading: false,
@@ -57,14 +56,16 @@ const userSlice = createSlice({
   initialState,
   reducers: {
     setUser: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.user = action.payload.user;
+      state.user = { ...action.payload.user, status: "online" };
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.error = null;
 
-      // Сохраняем в localStorage
       localStorage.setItem("token", action.payload.token);
-      localStorage.setItem("user", JSON.stringify(action.payload.user));
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...action.payload.user, status: "online" }),
+      );
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;
@@ -88,11 +89,23 @@ const userSlice = createSlice({
         localStorage.setItem("user", JSON.stringify(state.user));
       }
     },
+    setUserStatus: (state, action: PayloadAction<string>) => {
+      if (state.user) {
+        state.user.status = action.payload;
+        localStorage.setItem("user", JSON.stringify(state.user));
+      }
+    },
   },
 });
 
-export const { setUser, setLoading, setError, logout, updateUser } =
-  userSlice.actions;
+export const {
+  setUser,
+  setLoading,
+  setError,
+  logout,
+  updateUser,
+  setUserStatus,
+} = userSlice.actions;
 
 export const selectUser = (state: { user: UserState }) => state.user.user;
 export const selectIsAuthenticated = (state: { user: UserState }) =>

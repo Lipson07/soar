@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"mime/multipart"
 
 	"backend/internal/domain"
 
@@ -85,4 +86,9 @@ type CallService interface {
 	GetCallByID(ctx context.Context, callID uuid.UUID) (*domain.Call, error)
 	GetActiveCall(ctx context.Context, chatID uuid.UUID) (*domain.Call, error)
 	GetUserCalls(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Call, error)
+}
+type StoryService interface {
+	UploadStory(userID, userName string, userAvatar *string, file multipart.File, header *multipart.FileHeader) (*domain.Story, error)
+	GetStories(userID string) ([]domain.Story, error)
+	MarkStoryAsViewed(storyID, userID string) error
 }

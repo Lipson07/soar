@@ -79,6 +79,11 @@ const selectedChatSlice = createSlice({
         state.messages = [];
       }
     },
+    updateCurrentChat: (state, action: PayloadAction<Partial<Chat>>) => {
+      if (state.currentChat) {
+        state.currentChat = { ...state.currentChat, ...action.payload };
+      }
+    },
     setMessages: (state, action: PayloadAction<Message[]>) => {
       state.messages = action.payload;
     },
@@ -127,6 +132,7 @@ export const {
   openChat,
   closeChat,
   toggleChat,
+  updateCurrentChat,
   setMessages,
   addMessage,
   updateMessage,
@@ -136,7 +142,6 @@ export const {
   updateCurrentChatLastMessage,
 } = selectedChatSlice.actions;
 
-// Селекторы с правильными типами
 export const selectCurrentChat = (state: { selectedChat: SelectedChatState }) =>
   state.selectedChat.currentChat;
 

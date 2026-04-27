@@ -48,6 +48,59 @@ const Login = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const updateUserStatus = async (userId: string, status: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      await fetch(`http://localhost:8080/api/users/${userId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      });
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+    }
+  };
+
+  const connectWebSocket = (userId: string) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const socket = new WebSocket(
+        `ws://localhost:8080/ws?token=${token}&user_id=${userId}`,
+      );
+
+      socket.onopen = () => {
+        socket.send(
+          JSON.stringify({
+            type: "user-status",
+            user_id: userId,
+            status: "online",
+          }),
+        );
+      };
+
+      window.addEventListener("beforeunload", () => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(
+            JSON.stringify({
+              type: "user-status",
+              user_id: userId,
+              status: "offline",
+            }),
+          );
+        }
+      });
+    } catch (error) {
+      console.error("WebSocket connection failed:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -89,7 +142,7 @@ const Login = () => {
         last_seen: userData.last_seen || null,
         created_at: userData.created_at,
         updated_at: userData.updated_at,
-        status: userData.status || "offline",
+        status: "online",
         role: userData.role || "user",
       };
 
@@ -97,6 +150,9 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(adaptedUser));
 
       dispatch(setUser({ user: adaptedUser, token: token }));
+
+      await updateUserStatus(adaptedUser.id, "online");
+      connectWebSocket(adaptedUser.id);
 
       setTimeout(() => {
         navigate("/main");

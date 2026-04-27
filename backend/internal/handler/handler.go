@@ -57,7 +57,14 @@ type SecurityHandlerInterface interface {
 	TerminateAllOtherSessions(c *gin.Context)
 	GetSecurityReport(c *gin.Context)
 }
+
 type FilesHandlerInterface interface {
 	GetFiles(c *gin.Context)
 	DeleteFile(c *gin.Context)
+}
+
+type StoriesHandlerInterface interface {
+	UploadStory(c *gin.Context)
+	GetStories(c *gin.Context)
+	MarkAsViewed(c *gin.Context)
 }

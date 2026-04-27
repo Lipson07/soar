@@ -87,3 +87,11 @@ type CallRepository interface {
 	UpdateEnded(ctx context.Context, id uuid.UUID, endedAt time.Time) error
 	GetUserCalls(ctx context.Context, userID uuid.UUID, limit int) ([]*domain.Call, error)
 }
+type StoryRepository interface {
+	Create(story *domain.Story) (*domain.Story, error)
+	GetAll(userID string) ([]domain.Story, error)
+	GetByID(id string) (*domain.Story, error)
+	DeleteExpired() error
+	MarkAsViewed(storyID, userID string) error
+	GetViewers(storyID string) ([]string, error)
+}

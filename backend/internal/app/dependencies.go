@@ -20,6 +20,7 @@ func initDependencies(db *sqlx.DB) *gin.Engine {
 	securityRepo := postgres.NewSecurityRepository(db)
 	sessionRepo := postgres.NewSessionRepository(db)
 	callRepo := postgres.NewCallRepository(db)
+	storyRepo := postgres.NewStoryRepo(db)
 
 	userService := service.NewUserService(userRepo)
 	chatService := service.NewChatService(chatRepo, participantRepo, userRepo, messageRepo)
@@ -27,6 +28,7 @@ func initDependencies(db *sqlx.DB) *gin.Engine {
 	messageService := service.NewMessageService(messageRepo, participantRepo, chatRepo)
 	securityService := service.NewSecurityService(securityRepo, sessionRepo)
 	callService := service.NewCallService(callRepo, participantRepo, chatRepo)
+	storyService := service.NewStoryService(storyRepo, "./uploads")
 
 	hub := websocket.NewHub()
 	go hub.Run()
@@ -40,6 +42,7 @@ func initDependencies(db *sqlx.DB) *gin.Engine {
 	securityHandler := rest.NewSecurityHandler(securityService)
 	filesHandler := rest.NewFilesHandler()
 	callHandler := rest.NewCallHandler(callService)
+	storyHandler := rest.NewStoryHandler(storyService, userService)
 
 	router := rest.SetupRouter(
 		userHandler,
@@ -49,6 +52,7 @@ func initDependencies(db *sqlx.DB) *gin.Engine {
 		securityHandler,
 		filesHandler,
 		callHandler,
+		storyHandler,
 	)
 
 	router.GET("/ws", wsHandler.HandleWebSocket)

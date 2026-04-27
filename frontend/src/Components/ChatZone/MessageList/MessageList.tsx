@@ -6,10 +6,18 @@ import {
   setMessages,
   setLoading,
   updateCurrentChatLastMessage,
+  updateMessage,
+  updateCurrentChat,
 } from "../../../store/selectedChatSlice";
-import { updateChatLastMessage } from "../../../store/chatSlice";
+import { updateChatLastMessage, addChat } from "../../../store/chatSlice";
 import { selectUser, selectToken } from "../../../store/userSlice";
-import { BsFileEarmark, BsDownload } from "react-icons/bs";
+import {
+  BsFileEarmark,
+  BsDownload,
+  BsThreeDotsVertical,
+  BsPencil,
+  BsTrash,
+} from "react-icons/bs";
 import style from "./MessageList.module.scss";
 
 interface Message {
@@ -37,38 +45,164 @@ function MessageList() {
   const dispatch = useDispatch();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-
-  const isFetchingRef = useRef(false);
-  const lastChatIdRef = useRef<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editText, setEditText] = useState("");
+  const [menuMessageId, setMenuMessageId] = useState<string | null>(null);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const hasLoadedRef = useRef(false);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
 
   const getToken = useCallback(() => {
     return token || localStorage.getItem("token");
   }, [token]);
 
-  const fetchMessages = useCallback(async () => {
-    if (!currentChat) return;
-    if (isFetchingRef.current) return;
+  useEffect(() => {
+    if (editingMessage && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.setSelectionRange(editText.length, editText.length);
+    }
+  }, [editingMessage]);
 
-    // Если это тот же чат, не перезагружаем
-    if (lastChatIdRef.current === currentChat.id && messages.length > 0) {
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuMessageId) {
+        const target = e.target as HTMLElement;
+        if (!target.closest(`.${style.messageMenu}`)) {
+          setMenuMessageId(null);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [menuMessageId]);
+
+  const handleEditMessage = async (message: Message) => {
+    if (!editText.trim() || editText === message.text) {
+      setEditingMessage(null);
+      setEditText("");
       return;
     }
 
-    isFetchingRef.current = true;
+    const authToken = getToken();
+    if (!authToken) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/messages?message_id=${message.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ text: editText }),
+        },
+      );
+
+      if (response.ok) {
+        const updatedMessage = {
+          ...message,
+          text: editText,
+          is_edited: true,
+          updated_at: new Date().toISOString(),
+        };
+        dispatch(updateMessage(updatedMessage));
+
+        if (messages[messages.length - 1]?.id === message.id && currentChat) {
+          dispatch(
+            updateCurrentChatLastMessage({ lastMessage: updatedMessage }),
+          );
+          dispatch(
+            updateChatLastMessage({
+              chatId: currentChat.id,
+              lastMessage: updatedMessage,
+            }),
+          );
+        }
+
+        setEditingMessage(null);
+        setEditText("");
+      } else {
+        console.error("Failed to edit message:", await response.text());
+      }
+    } catch (error) {
+      console.error("Failed to edit message:", error);
+    }
+    setMenuMessageId(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setEditText("");
+  };
+
+  const handleEditKeyDown = (e: React.KeyboardEvent, message: Message) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleEditMessage(message);
+    } else if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!window.confirm("Удалить сообщение?")) return;
+
+    const authToken = getToken();
+    if (!authToken) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/messages?message_id=${messageId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        },
+      );
+
+      if (response.ok) {
+        const updatedMessages = messages.filter((msg) => msg.id !== messageId);
+        dispatch(setMessages(updatedMessages));
+
+        if (currentChat && updatedMessages.length > 0) {
+          const lastMessage = updatedMessages[updatedMessages.length - 1];
+          dispatch(updateCurrentChatLastMessage({ lastMessage }));
+          dispatch(
+            updateChatLastMessage({
+              chatId: currentChat.id,
+              lastMessage: lastMessage,
+            }),
+          );
+        }
+
+        setTimeout(() => loadMessages(), 500);
+      }
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+    }
+    setMenuMessageId(null);
+  };
+
+  const loadMessages = useCallback(async () => {
+    if (!currentChat) return;
+    if (currentChat.id.startsWith("temp_")) return;
+    if (isLoadingMessages) return;
+
+    setIsLoadingMessages(true);
     dispatch(setLoading(true));
 
     const authToken = getToken();
-
     if (!authToken) {
-      console.error("Токен не найден");
+      setIsLoadingMessages(false);
       dispatch(setLoading(false));
-      isFetchingRef.current = false;
       return;
     }
 
     try {
       const url = `http://localhost:8080/api/messages?chat_id=${currentChat.id}&limit=50&offset=0`;
-
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -91,8 +225,7 @@ function MessageList() {
         );
         dispatch(setMessages(sortedMessages));
 
-        // Обновляем последнее сообщение
-        if (sortedMessages.length > 0) {
+        if (sortedMessages.length > 0 && currentChat) {
           const lastMessage = sortedMessages[sortedMessages.length - 1];
           dispatch(updateCurrentChatLastMessage({ lastMessage }));
           dispatch(
@@ -102,33 +235,27 @@ function MessageList() {
             }),
           );
         }
-
-        lastChatIdRef.current = currentChat.id;
-      } else {
-        console.error("Ошибка загрузки сообщений:", response.status);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
     } finally {
+      setIsLoadingMessages(false);
       dispatch(setLoading(false));
-      isFetchingRef.current = false;
     }
-  }, [currentChat, getToken, dispatch, messages.length]);
+  }, [currentChat, getToken, dispatch]);
 
-  // Загружаем сообщения только при смене чата
   useEffect(() => {
-    if (currentChat) {
-      // Сбрасываем флаги при смене чата
-      isFetchingRef.current = false;
-      fetchMessages();
+    if (
+      currentChat &&
+      !currentChat.id.startsWith("temp_") &&
+      !hasLoadedRef.current
+    ) {
+      hasLoadedRef.current = true;
+      loadMessages();
     }
 
-    return () => {
-      // Очищаем сообщения при закрытии чата
-      dispatch(setMessages([]));
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentChat?.id]); // Только при изменении ID чата
+    return () => {};
+  }, [currentChat?.id, loadMessages]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -167,19 +294,36 @@ function MessageList() {
 
   const groupMessagesByDate = () => {
     const groups: { [key: string]: Message[] } = {};
-
     messages.forEach((message) => {
       const date = formatDate(message.created_at);
-      if (!groups[date]) {
-        groups[date] = [];
-      }
+      if (!groups[date]) groups[date] = [];
       groups[date].push(message);
     });
-
     return groups;
   };
 
   const renderMessageContent = (message: Message) => {
+    if (editingMessage?.id === message.id) {
+      return (
+        <div className={style.editMode}>
+          <textarea
+            ref={editInputRef}
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={(e) => handleEditKeyDown(e, message)}
+            className={style.editInput}
+            rows={3}
+          />
+          <div className={style.editActions}>
+            <button onClick={handleCancelEdit}>Отмена</button>
+            <button onClick={() => handleEditMessage(message)}>
+              Сохранить
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     switch (message.type) {
       case "image":
         return (
@@ -197,7 +341,6 @@ function MessageList() {
             )}
           </div>
         );
-
       case "file":
         return (
           <div className={style.fileMessage}>
@@ -222,13 +365,11 @@ function MessageList() {
             )}
           </div>
         );
-
       default:
         return <p className={style.messageText}>{message.text}</p>;
     }
   };
 
-  // Проверяем загрузку
   const isLoading = useSelector((state: any) => state.selectedChat.isLoading);
 
   if (!currentChat) {
@@ -254,6 +395,11 @@ function MessageList() {
     <>
       <div className={style.messageList}>
         <div className={style.messagesContainer}>
+          {currentChat.id.startsWith("temp_") && (
+            <div className={style.dateDivider}>
+              <span>Новый чат</span>
+            </div>
+          )}
           {Object.entries(messageGroups).map(([date, dateMessages]) => (
             <div key={date} className={style.dateGroup}>
               <div className={style.dateDivider}>
@@ -261,18 +407,74 @@ function MessageList() {
               </div>
               {dateMessages.map((message) => {
                 const isOwn = message.user_id === currentUser?.id;
-
                 return (
                   <div
                     key={message.id}
-                    className={`${style.message} ${isOwn ? style.own : style.other}`}
+                    id={`message-${message.id}`}
+                    className={`${style.message} ${
+                      isOwn ? style.own : style.other
+                    }`}
                   >
                     <div className={style.messageBubble}>
                       {renderMessageContent(message)}
-                      <span className={style.timestamp}>
-                        {formatTime(message.created_at)}
-                        {message.is_edited && " (ред.)"}
-                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginTop: "4px",
+                        }}
+                      >
+                        <span className={style.timestamp}>
+                          {formatTime(message.created_at)}
+                          {message.is_edited && (
+                            <span style={{ fontStyle: "italic", opacity: 0.7 }}>
+                              {" "}
+                              (ред.)
+                            </span>
+                          )}
+                        </span>
+                        {isOwn && message.type === "text" && (
+                          <div className={style.messageMenu}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMenuMessageId(
+                                  menuMessageId === message.id
+                                    ? null
+                                    : message.id,
+                                );
+                              }}
+                              className={style.menuButton}
+                            >
+                              <BsThreeDotsVertical size={14} />
+                            </button>
+                            {menuMessageId === message.id && (
+                              <div className={style.contextMenu}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingMessage(message);
+                                    setEditText(message.text);
+                                    setMenuMessageId(null);
+                                  }}
+                                >
+                                  <BsPencil size={14} /> Редактировать
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteMessage(message.id);
+                                  }}
+                                  className={style.deleteBtn}
+                                >
+                                  <BsTrash size={14} /> Удалить
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -282,7 +484,6 @@ function MessageList() {
           <div ref={messagesEndRef} />
         </div>
       </div>
-
       {lightboxImage && (
         <div className={style.lightbox} onClick={() => setLightboxImage(null)}>
           <img src={lightboxImage} alt="Просмотр изображения" />

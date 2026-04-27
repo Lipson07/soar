@@ -4,9 +4,9 @@ import { PersistGate } from "redux-persist/integration/react";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
 import store, { persistor } from "./store/store.ts";
+import { WebSocketProvider } from "./context/WebSocketContext";
 import "./index.scss";
 
-// Применяем тему ДО рендера из localStorage
 const applyStoredTheme = () => {
   try {
     const persistedData = localStorage.getItem("persist:settings");
@@ -56,7 +56,9 @@ createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
     <PersistGate loading={null} persistor={persistor}>
       <BrowserRouter>
-        <App />
+        <WebSocketProvider>
+          <App />
+        </WebSocketProvider>
       </BrowserRouter>
     </PersistGate>
   </Provider>,

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { IoSendOutline, IoClose } from "react-icons/io5";
 import { IoMdAttach } from "react-icons/io";
 import { BsEmojiSmile, BsFileEarmark, BsImage } from "react-icons/bs";
@@ -8,9 +8,12 @@ import {
   selectCurrentChat,
   setMessages,
   updateCurrentChatLastMessage,
+  updateCurrentChat,
 } from "../../../store/selectedChatSlice";
-import { updateChatLastMessage } from "../../../store/chatSlice";
+import { updateChatLastMessage, addChat } from "../../../store/chatSlice";
 import { selectUser, selectToken } from "../../../store/userSlice";
+import { useWebSocket } from "../../../context/WebSocketContext";
+import EmojiPicker from "emoji-picker-react";
 import style from "./MessageBar.module.scss";
 
 interface UploadedFile {
@@ -25,16 +28,175 @@ function MessageBar() {
   const [isSending, setIsSending] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const isTypingRef = useRef(false);
 
   const dispatch = useDispatch();
   const currentChat = useSelector(selectCurrentChat);
   const currentUser = useSelector(selectUser);
   const token = useSelector(selectToken);
+  const { sendMessage } = useWebSocket();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(event.target as Node) &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const getToken = () => {
     return token || localStorage.getItem("token");
+  };
+
+  const sendTypingStatus = (isTyping: boolean) => {
+    if (currentChat?.id && currentUser?.id) {
+      sendMessage({
+        type: "typing",
+        user_id: currentUser.id,
+        chat_id: currentChat.id,
+        is_typing: isTyping,
+        username: currentUser.username,
+      });
+    }
+  };
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setMessage(value);
+
+    if (value.length > 0 && !isTypingRef.current) {
+      isTypingRef.current = true;
+      sendTypingStatus(true);
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        sendTypingStatus(false);
+      }
+    }, 2000);
+  };
+
+  const onEmojiClick = (emojiObject: any) => {
+    setMessage((prev) => prev + emojiObject.emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const createChatIfNeeded = async () => {
+    if (!currentChat || !currentChat.id.startsWith("temp_")) {
+      return currentChat?.id;
+    }
+
+    const authToken = getToken();
+    if (!authToken) return null;
+
+    const otherUserId = currentChat.id.replace("temp_", "");
+
+    if (otherUserId === currentUser?.id) {
+      console.error("Cannot create chat with yourself");
+      return null;
+    }
+
+    try {
+      const createChatResponse = await fetch(
+        "http://localhost:8080/api/chats/private",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: otherUserId,
+          }),
+        },
+      );
+
+      if (createChatResponse.ok) {
+        const newChat = await createChatResponse.json();
+
+        dispatch(
+          updateCurrentChat({
+            ...newChat,
+            other_user_id: currentChat.other_user_id,
+            other_user_name: currentChat.other_user_name,
+            avatar_url: currentChat.avatar_url,
+          }),
+        );
+        dispatch(
+          addChat({
+            ...newChat,
+            other_user_id: currentChat.other_user_id,
+            other_user_name: currentChat.other_user_name,
+            avatar_url: currentChat.avatar_url,
+          }),
+        );
+
+        return newChat.id;
+      } else if (createChatResponse.status === 409) {
+        const errorData = await createChatResponse.json();
+
+        if (errorData.existing_chat_id) {
+          const chatResponse = await fetch(
+            `http://localhost:8080/api/chats/${errorData.existing_chat_id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            },
+          );
+
+          if (chatResponse.ok) {
+            const existingChat = await chatResponse.json();
+
+            dispatch(
+              updateCurrentChat({
+                ...existingChat,
+                other_user_id: currentChat.other_user_id,
+                other_user_name: currentChat.other_user_name,
+                avatar_url: currentChat.avatar_url,
+              }),
+            );
+            dispatch(
+              addChat({
+                ...existingChat,
+                other_user_id: currentChat.other_user_id,
+                other_user_name: currentChat.other_user_name,
+                avatar_url: currentChat.avatar_url,
+              }),
+            );
+
+            return existingChat.id;
+          }
+        }
+      } else {
+        const errorText = await createChatResponse.text();
+        console.error("Create chat error:", errorText);
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error creating chat:", error);
+      return null;
+    }
   };
 
   const uploadFile = async (file: File): Promise<UploadedFile | null> => {
@@ -87,9 +249,11 @@ function MessageBar() {
     setUploadedFile(null);
   };
 
-  const sendMessageToServer = async (text: string, fileData?: UploadedFile) => {
-    if (!currentChat) return null;
-
+  const sendMessageToServer = async (
+    chatId: string,
+    text: string,
+    fileData?: UploadedFile,
+  ) => {
     const authToken = getToken();
     if (!authToken) {
       throw new Error("Токен авторизации отсутствует");
@@ -112,7 +276,7 @@ function MessageBar() {
     }
 
     const response = await fetch(
-      `http://localhost:8080/api/messages?chat_id=${currentChat.id}`,
+      `http://localhost:8080/api/messages?chat_id=${chatId}`,
       {
         method: "POST",
         headers: {
@@ -131,14 +295,14 @@ function MessageBar() {
     return await response.json();
   };
 
-  const fetchMessages = async () => {
-    if (!currentChat) return;
+  const fetchMessages = async (chatId: string) => {
+    if (!chatId) return;
 
     const authToken = getToken();
     if (!authToken) return;
 
     const response = await fetch(
-      `http://localhost:8080/api/messages?chat_id=${currentChat.id}&limit=50&offset=0`,
+      `http://localhost:8080/api/messages?chat_id=${chatId}&limit=50&offset=0`,
       {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -161,7 +325,7 @@ function MessageBar() {
         dispatch(updateCurrentChatLastMessage({ lastMessage }));
         dispatch(
           updateChatLastMessage({
-            chatId: currentChat.id,
+            chatId: chatId,
             lastMessage: lastMessage,
           }),
         );
@@ -175,9 +339,23 @@ function MessageBar() {
     setIsSending(true);
     const messageText = message.trim();
 
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      sendTypingStatus(false);
+    }
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    const chatId = await createChatIfNeeded();
+    if (!chatId) {
+      setIsSending(false);
+      return;
+    }
+
     const tempMessage: any = {
       id: `temp-${Date.now()}`,
-      chat_id: currentChat.id,
+      chat_id: chatId,
       user_id: currentUser?.id || "",
       type: uploadedFile
         ? uploadedFile.mime_type.startsWith("image/")
@@ -197,11 +375,10 @@ function MessageBar() {
     };
 
     dispatch(addMessage(tempMessage));
-
     dispatch(updateCurrentChatLastMessage({ lastMessage: tempMessage }));
     dispatch(
       updateChatLastMessage({
-        chatId: currentChat.id,
+        chatId: chatId,
         lastMessage: tempMessage,
       }),
     );
@@ -210,8 +387,8 @@ function MessageBar() {
     setUploadedFile(null);
 
     try {
-      await sendMessageToServer(messageText, uploadedFile || undefined);
-      await fetchMessages();
+      await sendMessageToServer(chatId, messageText, uploadedFile || undefined);
+      await fetchMessages(chatId);
     } catch (error) {
       console.error("Failed to send message:", error);
       setMessage(messageText);
@@ -297,9 +474,21 @@ function MessageBar() {
         >
           <IoMdAttach size={20} />
         </button>
-        <button className={style.attachButton} title="Эмодзи">
-          <BsEmojiSmile size={20} />
-        </button>
+        <div className={style.emojiWrapper}>
+          <button
+            ref={emojiButtonRef}
+            className={style.attachButton}
+            title="Эмодзи"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+          >
+            <BsEmojiSmile size={20} />
+          </button>
+          {showEmojiPicker && (
+            <div ref={emojiPickerRef} className={style.emojiPicker}>
+              <EmojiPicker onEmojiClick={onEmojiClick} />
+            </div>
+          )}
+        </div>
       </div>
 
       <textarea
@@ -310,7 +499,7 @@ function MessageBar() {
             : "Введите сообщение..."
         }
         value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        onChange={handleMessageChange}
         onKeyPress={handleKeyPress}
         rows={1}
         disabled={isSending || isUploading}
